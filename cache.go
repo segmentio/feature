@@ -5,7 +5,6 @@ import (
 	"os"
 	"sort"
 	"sync"
-	"syscall"
 )
 
 // Cache is an in-memory view of feature mount point on a file system.
@@ -236,7 +235,7 @@ func (ids *idset) contains(id string) bool {
 }
 
 func (ids *idset) unmap() {
-	syscall.Munmap(ids.memory)
+	munmap(ids.memory)
 	ids.memory, ids.index = nil, nil
 }
 
