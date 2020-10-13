@@ -251,12 +251,7 @@ func mmapIDs(path string) (*idset, error) {
 	}
 	defer f.Close()
 
-	s, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	m, err := syscall.Mmap(int(f.Fd()), 0, int(s.Size()), syscall.PROT_READ, syscall.MAP_SHARED)
+	m, err := mmap(f)
 	if err != nil {
 		return nil, err
 	}
@@ -265,9 +260,7 @@ func mmapIDs(path string) (*idset, error) {
 	forEachLine(m, func(int, int) { count++ })
 
 	index := make([]uint32, 0, count)
-	forEachLine(m, func(off, _ int) {
-		index = append(index, uint32(off))
-	})
+	forEachLine(m, func(off, _ int) { index = append(index, uint32(off)) })
 
 	ids := &idset{memory: m, index: index}
 	sort.Sort(ids)
