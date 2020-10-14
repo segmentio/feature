@@ -76,8 +76,8 @@ func testTierGateEnabled(t *testing.T, path feature.MountPoint, tier *feature.Ti
 		"id-3",
 	})
 
-	enableGate(t, tier, "family-A", "gate-1", 1.0)
-	enableGate(t, tier, "family-A", "gate-2", 1.0)
+	enableGate(t, tier, "family-A", "gate-1", "collection", 1.0)
+	enableGate(t, tier, "family-A", "gate-2", "collection", 1.0)
 	gates := map[string][]string{
 		"family-A": {"gate-1", "gate-2"},
 	}
@@ -102,8 +102,8 @@ func testTierGateDisabled(t *testing.T, path feature.MountPoint, tier *feature.T
 		"id-3",
 	})
 
-	enableGate(t, tier, "family-A", "gate-1", 1.0)
-	enableGate(t, tier, "family-A", "gate-2", 0.0)
+	enableGate(t, tier, "family-A", "gate-1", "collection", 1.0)
+	enableGate(t, tier, "family-A", "gate-2", "collection", 0.0)
 	gates := map[string][]string{
 		"family-A": {"gate-1"},
 	}
@@ -130,9 +130,9 @@ func testTierGateDisableFamily(t *testing.T, path feature.MountPoint, tier *feat
 		"id-3",
 	})
 
-	enableGate(t, tier, "family-A", "gate-1", 1.0)
-	enableGate(t, tier, "family-A", "gate-2", 1.0)
-	enableGate(t, tier, "family-B", "gate-3", 1.0)
+	enableGate(t, tier, "family-A", "gate-1", "collection", 1.0)
+	enableGate(t, tier, "family-A", "gate-2", "collection", 1.0)
+	enableGate(t, tier, "family-B", "gate-3", "collection", 1.0)
 	gates := map[string][]string{
 		"family-B": {"gate-3"},
 	}
@@ -163,9 +163,9 @@ func testTierGateDisableAll(t *testing.T, path feature.MountPoint, tier *feature
 		"id-3",
 	})
 
-	enableGate(t, tier, "family-A", "gate-1", 1.0)
-	enableGate(t, tier, "family-A", "gate-2", 1.0)
-	enableGate(t, tier, "family-B", "gate-3", 1.0)
+	enableGate(t, tier, "family-A", "gate-1", "collection", 1.0)
+	enableGate(t, tier, "family-A", "gate-2", "collection", 1.0)
+	enableGate(t, tier, "family-B", "gate-3", "collection", 1.0)
 	gates := map[string][]string{}
 
 	if err := tier.DisableAll(); err != nil {
@@ -177,10 +177,10 @@ func testTierGateDisableAll(t *testing.T, path feature.MountPoint, tier *feature
 	expectGatesEnabled(t, tier, "collection", "id-3", gates)
 }
 
-func enableGate(t testing.TB, tier *feature.Tier, family, gate string, volume float64) {
+func enableGate(t testing.TB, tier *feature.Tier, family, gate, collection string, volume float64) {
 	t.Helper()
 
-	if err := tier.EnableGate(family, gate, volume); err != nil {
+	if err := tier.EnableGate(family, gate, collection, volume); err != nil {
 		t.Error("unexpected error enabling gate:", err)
 	}
 }

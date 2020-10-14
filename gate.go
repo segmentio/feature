@@ -32,12 +32,13 @@ func (it *GateIter) Next() bool { return it.next() }
 func (it *GateIter) Name() string { return it.name() }
 
 type GateEnabledIter struct {
-	path     MountPoint
-	families dir
-	gates    dir
-	id       string
-	salt     uint32
-	err      error
+	path       MountPoint
+	families   dir
+	gates      dir
+	collection string
+	id         string
+	salt       uint32
+	err        error
 }
 
 func (it *GateEnabledIter) Close() error {
@@ -67,7 +68,7 @@ func (it *GateEnabledIter) Next() bool {
 				}
 				defer g.Close()
 
-				v, err := readGate(filepath.Join(it.gates.path, it.gates.name()))
+				v, err := readGate(filepath.Join(it.gates.path, it.gates.name(), it.collection))
 				if err != nil {
 					if os.IsNotExist(err) {
 						continue

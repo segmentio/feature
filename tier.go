@@ -92,9 +92,10 @@ func (tier *Tier) IDs(collection string) *IDIter {
 
 func (tier *Tier) GatesEnabled(collection, id string) *GateEnabledIter {
 	return &GateEnabledIter{
-		path:     tier.path,
-		families: tier.gatesEnabled(collection, id),
-		id:       id,
+		path:       tier.path,
+		families:   tier.gatesEnabled(collection, id),
+		collection: collection,
+		id:         id,
 	}
 }
 
@@ -111,21 +112,28 @@ func (tier *Tier) gatesEnabled(collection, id string) dir {
 	return dir{}
 }
 
-func (tier *Tier) EnableGate(family, name string, volume float64) error {
+func (tier *Tier) EnableGate(family, name, collection string, volume float64) error {
 	if err := mkdir(tier.pathTo("gates")); err != nil {
 		return err
 	}
 	if err := mkdir(tier.familyPath(family)); err != nil {
 		return err
 	}
-	return writeFile(tier.gatePath(family, name), func(f *os.File) error {
+	if err := mkdir(tier.gatePath(family, name)); err != nil {
+		return err
+	}
+	return writeFile(tier.gateCollectionPath(family, name, collection), func(f *os.File) error {
 		_, err := fmt.Fprintf(f, "%g\n", volume)
 		return err
 	})
 }
 
+func (tier *Tier) DisableGateCollection(family, name, collection string) error {
+	return unlink(tier.gateCollectionPath(family, name, collection))
+}
+
 func (tier *Tier) DisableGate(family, name string) error {
-	return unlink(tier.gatePath(family, name))
+	return rmdir(tier.gatePath(family, name))
 }
 
 func (tier *Tier) DisableFamily(family string) error {
@@ -136,8 +144,8 @@ func (tier *Tier) DisableAll() error {
 	return rmdir(tier.pathTo("gates"))
 }
 
-func (tier *Tier) ReadGate(family, name string) (float64, error) {
-	return readGate(tier.gatePath(family, name))
+func (tier *Tier) ReadGate(family, name, collection string) (float64, error) {
+	return readGate(tier.gateCollectionPath(family, name, collection))
 }
 
 func (tier *Tier) familyPath(family string) string {
@@ -150,6 +158,10 @@ func (tier *Tier) gatePath(family, name string) string {
 
 func (tier *Tier) collectionPath(collection string) string {
 	return filepath.Join(string(tier.path), "tiers", tier.group, tier.name, "ids", collection)
+}
+
+func (tier *Tier) gateCollectionPath(family, name, collection string) string {
+	return filepath.Join(string(tier.path), "tiers", tier.group, tier.name, "gates", family, name, collection)
 }
 
 func (tier *Tier) pathTo(path string) string {

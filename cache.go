@@ -49,7 +49,17 @@ func (c *Cache) GateOpen(family, gate, collection, id string) bool {
 			i := sort.Search(len(f), func(i int) bool {
 				return f[i].name >= gate
 			})
-			return i < len(f) && f[i].name == gate && f[i].open(id)
+
+			for _, g := range f[i:] {
+				if g.name != gate {
+					break
+				}
+				if g.collection == collection && g.open(id) {
+					return true
+				}
+			}
+
+			return false
 		}
 	}
 
@@ -69,7 +79,7 @@ func (c *Cache) AppendGates(gates []string, family, collection, id string) []str
 
 		if t.ids[collection].contains(id) {
 			for _, g := range t.gates[family] {
-				if g.openWith(id, h) {
+				if g.collection == collection && g.openWith(id, h) {
 					gates = append(gates, g.name)
 				}
 			}
@@ -100,7 +110,8 @@ type cachedGate struct {
 
 type cachedEnabledGate struct {
 	*cachedGate
-	volume float64
+	collection string
+	volume     float64
 }
 
 func (g *cachedEnabledGate) open(id string) bool {
@@ -167,17 +178,24 @@ func (path MountPoint) Load() (*Cache, error) {
 
 			if err := Scan(t.Families(), func(family string) error {
 				return Scan(t.Gates(family), func(gate string) error {
-					g, ok := gates[familyGate{family: family, gate: gate}]
-					if ok {
-						volume, err := readGate(t.gatePath(family, gate))
-						if err != nil {
-							return err
+					d := readdir(t.gatePath(family, gate))
+					defer d.close()
+
+					for d.next() {
+						g, ok := gates[familyGate{family: family, gate: gate}]
+						if ok {
+							volume, err := readGate(t.gateCollectionPath(family, gate, d.name()))
+							if err != nil {
+								return err
+							}
+							c.gates[g.family] = append(c.gates[g.family], cachedEnabledGate{
+								cachedGate: g,
+								collection: strings.load(d.name()),
+								volume:     volume,
+							})
 						}
-						c.gates[g.family] = append(c.gates[g.family], cachedEnabledGate{
-							cachedGate: g,
-							volume:     volume,
-						})
 					}
+
 					return nil
 				})
 			}); err != nil {

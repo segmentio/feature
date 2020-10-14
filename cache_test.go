@@ -47,9 +47,9 @@ func TestCache(t *testing.T) {
 	populateCollection(t, col2, []string{"id-2", "id-3"})
 	populateCollection(t, col3, []string{"id-4", "id-5", "id-6"})
 
-	enableGate(t, tier1, "family-A", "gate-1", 1.0)
-	enableGate(t, tier1, "family-A", "gate-2", 1.0)
-	enableGate(t, tier2, "family-B", "gate-3", 1.0)
+	enableGate(t, tier1, "family-A", "gate-1", "workspaces", 1.0)
+	enableGate(t, tier1, "family-A", "gate-2", "workspaces", 1.0)
+	enableGate(t, tier2, "family-B", "gate-3", "workspaces", 1.0)
 
 	cache, err := path.Load()
 	if err != nil {
@@ -118,11 +118,11 @@ func BenchmarkCache(b *testing.B) {
 	defer col1.Close()
 	defer col2.Close()
 
-	enableGate(b, tier1, "family-A", "gate-1", 1.0)
-	enableGate(b, tier1, "family-A", "gate-2", 1.0)
+	enableGate(b, tier1, "family-A", "gate-1", "workspaces", 1.0)
+	enableGate(b, tier1, "family-A", "gate-2", "workspaces", 1.0)
 
-	enableGate(b, tier2, "family-A", "gate-1", 0.0)
-	enableGate(b, tier2, "family-A", "gate-2", 0.0)
+	enableGate(b, tier2, "family-A", "gate-1", "workspaces", 0.0)
+	enableGate(b, tier2, "family-A", "gate-2", "workspaces", 0.0)
 
 	const N = 10e3
 	prng := rand.New(rand.NewSource(0))

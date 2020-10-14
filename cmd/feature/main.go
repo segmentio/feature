@@ -4,12 +4,10 @@ import (
 	"bufio"
 	"io"
 	"os"
-	"os/user"
-	"path/filepath"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/segmentio/cli"
+	"github.com/segmentio/cli/human"
 	"github.com/segmentio/feature"
 )
 
@@ -40,7 +38,7 @@ func main() {
 }
 
 type commonConfig struct {
-	Path path `flag:"-p,--path" help:"Path to the directory where the feature database is stored" default:"~/.feature"`
+	Path human.Path `flag:"-p,--path" help:"Path to the directory where the feature database is stored" default:"~/.feature"`
 }
 
 func (c *commonConfig) mount(do func(feature.MountPoint) error) error {
@@ -69,21 +67,6 @@ func (c *outputConfig) table(do func(io.Writer) error) error {
 	tw := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
 	defer tw.Flush()
 	return do(tw)
-}
-
-type path string
-
-func (p *path) UnmarshalText(b []byte) error {
-	s := string(b)
-	if strings.HasPrefix(s, "~") {
-		u, err := user.Current()
-		if err != nil {
-			return err
-		}
-		s = filepath.Join(u.HomeDir, s[1:])
-	}
-	*p = path(s)
-	return nil
 }
 
 type family string
