@@ -200,18 +200,19 @@ func (path MountPoint) Load() (*Cache, error) {
 	return &Cache{tiers: tiers}, nil
 }
 
+type slice struct {
+	offset uint32
+	length uint32
+}
+
 type idset struct {
 	memory []byte
-	index  []uint32
+	index  []slice
 }
 
 func (ids *idset) at(i int) []byte {
-	offset := int(ids.index[i])
-	length := bytes.IndexByte(ids.memory[offset:], '\n')
-	if length < 0 {
-		return ids.memory[offset:]
-	}
-	return ids.memory[offset : offset+length]
+	slice := ids.index[i]
+	return ids.memory[slice.offset : slice.offset+slice.length]
 }
 
 func (ids *idset) contains(id string) bool {
@@ -245,8 +246,13 @@ func mmapIDs(path string) (*idset, error) {
 	count := 0
 	forEachLine(m, func(int, int) { count++ })
 
-	index := make([]uint32, 0, count)
-	forEachLine(m, func(off, _ int) { index = append(index, uint32(off)) })
+	index := make([]slice, 0, count)
+	forEachLine(m, func(off, len int) {
+		index = append(index, slice{
+			offset: uint32(off),
+			length: uint32(len),
+		})
+	})
 
 	ids := &idset{memory: m, index: index}
 	if !sort.IsSorted(ids) {
