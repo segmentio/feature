@@ -12,17 +12,8 @@ type enableConfig struct {
 	commonConfig
 }
 
-func enable(config enableConfig, group group, tier tier, family family, gate gate, volume human.Ratio) error {
+func enable(config enableConfig, group group, tier tier, family family, gate gate, collection collection, volume human.Ratio) error {
 	return config.mount(func(path feature.MountPoint) error {
-		g, err := path.OpenGate(string(family), string(gate))
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("%s/%s: gate does not exist\n", family, gate)
-			}
-			return err
-		}
-		defer g.Close()
-
 		t, err := path.OpenTier(string(group), string(tier))
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -31,7 +22,6 @@ func enable(config enableConfig, group group, tier tier, family family, gate gat
 			return err
 		}
 		defer t.Close()
-
-		return t.EnableGate(string(family), string(gate), float64(volume))
+		return t.EnableGate(string(family), string(gate), string(collection), float64(volume))
 	})
 }

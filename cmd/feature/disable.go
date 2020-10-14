@@ -10,7 +10,7 @@ type disableConfig struct {
 	commonConfig
 }
 
-func disable(config disableConfig, group group, tier tier, family family, gate gate) error {
+func disable(config disableConfig, group group, tier tier, family family, gate gate, collection collection) error {
 	return config.mount(func(path feature.MountPoint) error {
 		t, err := path.OpenTier(string(group), string(tier))
 		if err != nil {
@@ -20,6 +20,6 @@ func disable(config disableConfig, group group, tier tier, family family, gate g
 			return err
 		}
 		defer t.Close()
-		return t.DisableGate(string(family), string(gate))
+		return t.EnableGate(string(family), string(gate), string(collection), 0)
 	})
 }

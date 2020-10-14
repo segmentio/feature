@@ -3,11 +3,8 @@ package feature
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 // Iter is an interface implemented by the iterator types exposed by this
@@ -43,66 +40,13 @@ func Mount(path string) (MountPoint, error) {
 	return MountPoint(p), err
 }
 
-func (path MountPoint) CreateGate(family, name string, salt uint32) (*Gate, error) {
-	if err := mkdir(path.to("gates")); err != nil {
-		return nil, err
-	}
-
-	if err := mkdir(path.familyPath(family)); err != nil {
-		return nil, fmt.Errorf("creating gate family %q: %w", family, err)
-	}
-
-	if err := writeFile(path.gatePath(family, name), func(f *os.File) error {
-		_, err := fmt.Fprintf(f, "%d\n", salt)
-		return err
-	}); err != nil {
-		return nil, fmt.Errorf("creating gate %q of family %q: %w", name, family, err)
-	}
-
-	g := &Gate{
-		path:   path,
-		family: family,
-		name:   name,
-		salt:   strconv.FormatUint(uint64(salt), 10),
-	}
-
-	return g, nil
-}
-
-func (path MountPoint) OpenGate(family, name string) (*Gate, error) {
-	b, err := ioutil.ReadFile(path.gatePath(family, name))
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Make a special case so the caller can use os.IsNotExist to test
-			// the error.
-			return nil, err
-		}
-		return nil, fmt.Errorf("opening gate %q of family %q: %w", name, family, err)
-	}
-
-	g := &Gate{
-		path:   path,
-		family: family,
-		name:   name,
-		salt:   strings.TrimSpace(string(b)),
-	}
-
-	return g, nil
-}
-
 func (path MountPoint) CreateTier(group, name string) (*Tier, error) {
-	if err := mkdir(path.to("tiers")); err != nil {
-		return nil, err
-	}
-
 	if err := mkdir(path.groupPath(group)); err != nil {
 		return nil, fmt.Errorf("creating tier group %q: %w", group, err)
 	}
-
 	if err := mkdir(path.tierPath(group, name)); err != nil {
 		return nil, fmt.Errorf("creating tier %q of group %q: %w", name, group, err)
 	}
-
 	return &Tier{path: path, group: group, name: name}, nil
 }
 
@@ -114,14 +58,6 @@ func (path MountPoint) OpenTier(group, name string) (*Tier, error) {
 	return &Tier{path: path, group: group, name: name}, nil
 }
 
-func (path MountPoint) DeleteGate(family, name string) error {
-	return rmdir(path.gatePath(family, name))
-}
-
-func (path MountPoint) DeleteFamily(family string) error {
-	return rmdir(path.familyPath(family))
-}
-
 func (path MountPoint) DeleteTier(group, name string) error {
 	return rmdir(path.tierPath(group, name))
 }
@@ -130,40 +66,20 @@ func (path MountPoint) DeleteGroup(group string) error {
 	return rmdir(path.groupPath(group))
 }
 
-func (path MountPoint) Gates(family string) *GateIter {
-	return &GateIter{readdir(path.familyPath(family))}
-}
-
-func (path MountPoint) Families() *FamilyIter {
-	return &FamilyIter{readdir(path.to("gates"))}
-}
-
 func (path MountPoint) Tiers(group string) *TierIter {
 	return &TierIter{readdir(path.groupPath(group))}
 }
 
 func (path MountPoint) Groups() *GroupIter {
-	return &GroupIter{readdir(path.to("tiers"))}
-}
-
-func (path MountPoint) familyPath(family string) string {
-	return filepath.Join(string(path), "gates", family)
-}
-
-func (path MountPoint) gatePath(family, name string) string {
-	return filepath.Join(string(path), "gates", family, name)
+	return &GroupIter{readdir(string(path))}
 }
 
 func (path MountPoint) groupPath(group string) string {
-	return filepath.Join(string(path), "tiers", group)
+	return filepath.Join(string(path), group)
 }
 
 func (path MountPoint) tierPath(group, name string) string {
-	return filepath.Join(string(path), "tiers", group, name)
-}
-
-func (path MountPoint) to(name string) string {
-	return filepath.Join(string(path), name)
+	return filepath.Join(string(path), group, name)
 }
 
 type dir struct {

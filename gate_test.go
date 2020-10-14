@@ -16,28 +16,18 @@ func TestGate(t *testing.T) {
 		function func(*testing.T, feature.MountPoint, *feature.Tier)
 	}{
 		{
-			scenario: "fully enabled gates are exposed when listing gates for a tier",
+			scenario: "enabled gates are exposed when listing gates for a tier",
 			function: testTierGateEnabled,
 		},
 
 		{
-			scenario: "fully disabled gates are not exposed when listing gates for a tier",
+			scenario: "disabled gates are not exposed when listing gates for a tier",
 			function: testTierGateDisabled,
 		},
 
 		{
-			scenario: "disabling a gate family in a tier causes all its gates to not be exposed anymore",
-			function: testTierGateDisableFamily,
-		},
-
-		{
-			scenario: "disabling a gate family in a tier causes all its gates to not be exposed anymore",
-			function: testTierGateDisableFamily,
-		},
-
-		{
-			scenario: "disabling all gates in a tier causes all its gates to not be exposed anymore",
-			function: testTierGateDisableAll,
+			scenario: "deleted gates are not exposed when listing gates for a tier",
+			function: testTierGateDelete,
 		},
 	}
 
@@ -62,11 +52,6 @@ func TestGate(t *testing.T) {
 }
 
 func testTierGateEnabled(t *testing.T, path feature.MountPoint, tier *feature.Tier) {
-	g1 := createGate(t, path, "family-A", "gate-1")
-	g2 := createGate(t, path, "family-A", "gate-2")
-	defer g1.Close()
-	defer g2.Close()
-
 	col := createCollection(t, tier, "collection")
 	defer col.Close()
 
@@ -75,6 +60,9 @@ func testTierGateEnabled(t *testing.T, path feature.MountPoint, tier *feature.Ti
 		"id-2",
 		"id-3",
 	})
+
+	createGate(t, tier, "family-A", "gate-1", "collection", 1234)
+	createGate(t, tier, "family-A", "gate-2", "collection", 2345)
 
 	enableGate(t, tier, "family-A", "gate-1", "collection", 1.0)
 	enableGate(t, tier, "family-A", "gate-2", "collection", 1.0)
@@ -88,11 +76,6 @@ func testTierGateEnabled(t *testing.T, path feature.MountPoint, tier *feature.Ti
 }
 
 func testTierGateDisabled(t *testing.T, path feature.MountPoint, tier *feature.Tier) {
-	g1 := createGate(t, path, "family-A", "gate-1")
-	g2 := createGate(t, path, "family-A", "gate-2")
-	defer g1.Close()
-	defer g2.Close()
-
 	col := createCollection(t, tier, "collection")
 	defer col.Close()
 
@@ -101,6 +84,31 @@ func testTierGateDisabled(t *testing.T, path feature.MountPoint, tier *feature.T
 		"id-2",
 		"id-3",
 	})
+
+	createGate(t, tier, "family-A", "gate-1", "collection", 1234)
+	createGate(t, tier, "family-A", "gate-2", "collection", 2345)
+
+	enableGate(t, tier, "family-A", "gate-1", "collection", 0.0)
+	enableGate(t, tier, "family-A", "gate-2", "collection", 0.0)
+	gates := map[string][]string{}
+
+	expectGatesEnabled(t, tier, "collection", "id-1", gates)
+	expectGatesEnabled(t, tier, "collection", "id-2", gates)
+	expectGatesEnabled(t, tier, "collection", "id-3", gates)
+}
+
+func testTierGateDelete(t *testing.T, path feature.MountPoint, tier *feature.Tier) {
+	col := createCollection(t, tier, "collection")
+	defer col.Close()
+
+	populateCollection(t, col, []string{
+		"id-1",
+		"id-2",
+		"id-3",
+	})
+
+	createGate(t, tier, "family-A", "gate-1", "collection", 1234)
+	createGate(t, tier, "family-A", "gate-2", "collection", 2345)
 
 	enableGate(t, tier, "family-A", "gate-1", "collection", 1.0)
 	enableGate(t, tier, "family-A", "gate-2", "collection", 0.0)
@@ -113,68 +121,12 @@ func testTierGateDisabled(t *testing.T, path feature.MountPoint, tier *feature.T
 	expectGatesEnabled(t, tier, "collection", "id-3", gates)
 }
 
-func testTierGateDisableFamily(t *testing.T, path feature.MountPoint, tier *feature.Tier) {
-	g1 := createGate(t, path, "family-A", "gate-1")
-	g2 := createGate(t, path, "family-A", "gate-1")
-	g3 := createGate(t, path, "family-B", "gate-3")
-	defer g1.Close()
-	defer g2.Close()
-	defer g3.Close()
+func createGate(t testing.TB, tier *feature.Tier, family, gate, collection string, salt uint32) {
+	t.Helper()
 
-	col := createCollection(t, tier, "collection")
-	defer col.Close()
-
-	populateCollection(t, col, []string{
-		"id-1",
-		"id-2",
-		"id-3",
-	})
-
-	enableGate(t, tier, "family-A", "gate-1", "collection", 1.0)
-	enableGate(t, tier, "family-A", "gate-2", "collection", 1.0)
-	enableGate(t, tier, "family-B", "gate-3", "collection", 1.0)
-	gates := map[string][]string{
-		"family-B": {"gate-3"},
+	if err := tier.CreateGate(family, gate, collection, salt); err != nil {
+		t.Error("unexpected error creating gate:", err)
 	}
-
-	if err := tier.DisableFamily("family-A"); err != nil {
-		t.Fatal(err)
-	}
-
-	expectGatesEnabled(t, tier, "collection", "id-1", gates)
-	expectGatesEnabled(t, tier, "collection", "id-2", gates)
-	expectGatesEnabled(t, tier, "collection", "id-3", gates)
-}
-
-func testTierGateDisableAll(t *testing.T, path feature.MountPoint, tier *feature.Tier) {
-	g1 := createGate(t, path, "family-A", "gate-1")
-	g2 := createGate(t, path, "family-A", "gate-1")
-	g3 := createGate(t, path, "family-B", "gate-3")
-	defer g1.Close()
-	defer g2.Close()
-	defer g3.Close()
-
-	col := createCollection(t, tier, "collection")
-	defer col.Close()
-
-	populateCollection(t, col, []string{
-		"id-1",
-		"id-2",
-		"id-3",
-	})
-
-	enableGate(t, tier, "family-A", "gate-1", "collection", 1.0)
-	enableGate(t, tier, "family-A", "gate-2", "collection", 1.0)
-	enableGate(t, tier, "family-B", "gate-3", "collection", 1.0)
-	gates := map[string][]string{}
-
-	if err := tier.DisableAll(); err != nil {
-		t.Fatal(err)
-	}
-
-	expectGatesEnabled(t, tier, "collection", "id-1", gates)
-	expectGatesEnabled(t, tier, "collection", "id-2", gates)
-	expectGatesEnabled(t, tier, "collection", "id-3", gates)
 }
 
 func enableGate(t testing.TB, tier *feature.Tier, family, gate, collection string, volume float64) {

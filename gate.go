@@ -31,6 +31,16 @@ func (it *GateIter) Next() bool { return it.next() }
 
 func (it *GateIter) Name() string { return it.name() }
 
+func (it *GateIter) Created() *GateCreatedIter { return &GateCreatedIter{it.read()} }
+
+type GateCreatedIter struct{ dir }
+
+func (it *GateCreatedIter) Close() error { return it.close() }
+
+func (it *GateCreatedIter) Next() bool { return it.next() }
+
+func (it *GateCreatedIter) Name() string { return it.name() }
+
 type GateEnabledIter struct {
 	path       MountPoint
 	families   dir
@@ -39,9 +49,14 @@ type GateEnabledIter struct {
 	id         string
 	salt       uint32
 	err        error
+	hash       *bufferedHash64
 }
 
 func (it *GateEnabledIter) Close() error {
+	if it.hash != nil {
+		releaseBufferedHash64(it.hash)
+		it.hash = nil
+	}
 	err1 := it.families.close()
 	err2 := it.gates.close()
 	if err2 != nil {
@@ -54,21 +69,14 @@ func (it *GateEnabledIter) Close() error {
 }
 
 func (it *GateEnabledIter) Next() bool {
+	if it.hash == nil {
+		it.hash = acquireBufferedHash64()
+	}
+
 	for {
 		if it.gates.opened() {
 			for it.gates.next() {
-				g, err := it.path.OpenGate(it.Family(), it.Gate())
-				if err != nil {
-					if os.IsNotExist(err) {
-						continue
-					}
-					it.err = err
-					it.Close()
-					return false
-				}
-				defer g.Close()
-
-				v, err := readGate(filepath.Join(it.gates.path, it.gates.name(), it.collection))
+				s, err := readGateSalt(filepath.Join(it.gates.path, it.gates.name(), it.collection, "salt"))
 				if err != nil {
 					if os.IsNotExist(err) {
 						continue
@@ -78,7 +86,17 @@ func (it *GateEnabledIter) Next() bool {
 					return false
 				}
 
-				if g.Open(it.id, v) {
+				v, err := readGateVolume(filepath.Join(it.gates.path, it.gates.name(), it.collection, "volume"))
+				if err != nil {
+					if os.IsNotExist(err) {
+						continue
+					}
+					it.err = err
+					it.Close()
+					return false
+				}
+
+				if openGate(it.id, s, v, it.hash) {
 					return true
 				}
 			}
@@ -108,39 +126,6 @@ func (it *GateEnabledIter) Name() string {
 	return it.Family() + "/" + it.Gate()
 }
 
-type Gate struct {
-	path   MountPoint
-	family string
-	name   string
-	salt   string
-}
-
-func (g *Gate) Close() error {
-	return nil
-}
-
-func (g *Gate) String() string {
-	return "/gates/" + g.family + "/" + g.name
-}
-
-func (g *Gate) Family() string {
-	return g.family
-}
-
-func (g *Gate) Name() string {
-	return g.name
-}
-
-func (g *Gate) Salt() string {
-	return g.salt
-}
-
-func (g *Gate) Open(id string, volume float64) bool {
-	h := acquireBufferedHash64()
-	defer releaseBufferedHash64(h)
-	return openGate(id, g.salt, volume, h)
-}
-
 // openGate is inherited from github.com/segmentio/flagon; we had to port the
 // algorithm to ensure compatibility between the packages.
 func openGate(id, salt string, volume float64, h *bufferedHash64) bool {
@@ -159,8 +144,17 @@ func openGate(id, salt string, volume float64, h *bufferedHash64) bool {
 	return (float64(h.hash.Sum64()%100) + 1) <= (100 * volume)
 }
 
-func readGate(path string) (float64, error) {
-	b, err := ioutil.ReadFile(path)
+func readGateFile(path string) ([]byte, error) {
+	return ioutil.ReadFile(path)
+}
+
+func readGateSalt(path string) (string, error) {
+	b, err := readGateFile(path)
+	return strings.TrimSpace(string(b)), err
+}
+
+func readGateVolume(path string) (float64, error) {
+	b, err := readGateFile(path)
 	if err != nil {
 		return 0, err
 	}

@@ -16,31 +16,6 @@ func TestMountPoint(t *testing.T) {
 		function func(*testing.T, feature.MountPoint)
 	}{
 		{
-			scenario: "opening a gate which does not exist returns an error",
-			function: testMountPointOpenGateNotExist,
-		},
-
-		{
-			scenario: "gates created are exposed when listing families and gates",
-			function: testMountPointCreateGateAndList,
-		},
-
-		{
-			scenario: "gates deleted are not exposed anymore when listing families and gates",
-			function: testMountPointDeleteGateAndList,
-		},
-
-		{
-			scenario: "deleting a gate which does not exist does nothing",
-			function: testMountPointDeleteGateNotExist,
-		},
-
-		{
-			scenario: "deleting a family which does not exist does nothing",
-			function: testMountPointDeleteFamilyNotExist,
-		},
-
-		{
 			scenario: "opening a tier which does not exist returns an error",
 			function: testMountPointOpenTierNotExist,
 		},
@@ -80,69 +55,6 @@ func TestMountPoint(t *testing.T) {
 			test.function(t, p)
 		})
 	}
-}
-
-func testMountPointOpenGateNotExist(t *testing.T, path feature.MountPoint) {
-	_, err := path.OpenGate("hello", "world")
-	if err == nil || !os.IsNotExist(err) {
-		t.Error("unexpected error:", err)
-	}
-}
-
-func testMountPointCreateGateAndList(t *testing.T, path feature.MountPoint) {
-	g1 := createGate(t, path, "family-A", "name-1")
-	g2 := createGate(t, path, "family-A", "name-2")
-	g3 := createGate(t, path, "family-B", "name-3")
-
-	defer g1.Close()
-	defer g2.Close()
-	defer g3.Close()
-
-	expectFamilies(t, path, []string{
-		"family-A",
-		"family-B",
-	})
-
-	expectGates(t, path, "family-A", []string{
-		"name-1",
-		"name-2",
-	})
-
-	expectGates(t, path, "family-B", []string{
-		"name-3",
-	})
-}
-
-func testMountPointDeleteGateAndList(t *testing.T, path feature.MountPoint) {
-	g1 := createGate(t, path, "family-A", "name-1")
-	g2 := createGate(t, path, "family-A", "name-2")
-	g3 := createGate(t, path, "family-B", "name-3")
-
-	defer g1.Close()
-	defer g2.Close()
-	defer g3.Close()
-
-	deleteGate(t, path, "family-A", "name-1")
-	deleteGate(t, path, "family-B", "name-3")
-
-	expectFamilies(t, path, []string{
-		"family-A",
-		"family-B",
-	})
-
-	expectGates(t, path, "family-A", []string{
-		"name-2",
-	})
-
-	expectGates(t, path, "family-B", []string{})
-}
-
-func testMountPointDeleteGateNotExist(t *testing.T, path feature.MountPoint) {
-	deleteGate(t, path, "family-A", "name-1")
-}
-
-func testMountPointDeleteFamilyNotExist(t *testing.T, path feature.MountPoint) {
-	deleteFamily(t, path, "family-A")
 }
 
 func testMountPointOpenTierNotExist(t *testing.T, path feature.MountPoint) {
@@ -201,51 +113,14 @@ func testMountPointDeleteTierAndList(t *testing.T, path feature.MountPoint) {
 }
 
 func testMountPointDeleteTierNotExist(t *testing.T, path feature.MountPoint) {
-	deleteGate(t, path, "group-A", "name-1")
+	deleteTier(t, path, "group-A", "name-1")
 }
 
 func testMountPointDeleteGroupNotExist(t *testing.T, path feature.MountPoint) {
 	deleteGroup(t, path, "group-A")
 }
 
-func createGate(t testing.TB, path feature.MountPoint, family, name string) *feature.Gate {
-	t.Helper()
-
-	g, err := path.CreateGate(family, name, 42)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return g
-}
-
-func deleteFamily(t testing.TB, path feature.MountPoint, family string) {
-	t.Helper()
-
-	if err := path.DeleteFamily(family); err != nil {
-		t.Error(err)
-	}
-}
-
-func deleteGate(t testing.TB, path feature.MountPoint, family, name string) {
-	t.Helper()
-
-	if err := path.DeleteGate(family, name); err != nil {
-		t.Error(err)
-	}
-}
-
-func expectFamilies(t testing.TB, path feature.MountPoint, families []string) {
-	t.Helper()
-	found := readAll(t, path.Families())
-
-	if !reflect.DeepEqual(found, families) {
-		t.Error("families mismatch")
-		t.Logf("want: %q", families)
-		t.Logf("got:  %q", found)
-	}
-}
-
+/*
 func expectGates(t testing.TB, path feature.MountPoint, family string, gates []string) {
 	t.Helper()
 	found := readAll(t, path.Gates(family))
@@ -270,6 +145,7 @@ func expectGates(t testing.TB, path feature.MountPoint, family string, gates []s
 		}
 	}
 }
+*/
 
 func createTier(t testing.TB, path feature.MountPoint, group, name string) *feature.Tier {
 	t.Helper()

@@ -75,17 +75,19 @@ func describeTier(config describeTierConfig, group group, tier tier) error {
 			fmt.Fprintf(w, "Gates:\n")
 
 			if err := feature.Scan(t.Families(), func(family string) error {
-				if _, err := fmt.Fprintf(w, "  %s:\n", family); err != nil {
-					return err
-				}
-
 				return feature.Scan(t.Gates(family), func(gate string) error {
-					v, err := t.ReadGate(family, gate)
-					if err != nil {
+					if _, err := fmt.Fprintf(w, "  %s/%s:\n", family, gate); err != nil {
 						return err
 					}
-					_, err = fmt.Fprintf(w, "  - %s\t(%.0f%%)\n", gate, v*100)
-					return err
+
+					return feature.Scan(t.GatesCreated(family, gate), func(collection string) error {
+						_, volume, err := t.ReadGate(family, gate, collection)
+						if err != nil {
+							return err
+						}
+						_, err = fmt.Fprintf(w, "  - %s\t(%.0f%%)\n", collection, volume*100)
+						return err
+					})
 				})
 			}); err != nil {
 				return err

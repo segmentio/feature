@@ -19,14 +19,6 @@ func TestCache(t *testing.T) {
 	defer os.RemoveAll(tmp)
 	path := feature.MountPoint(tmp)
 
-	gate1 := createGate(t, path, "family-A", "gate-1")
-	gate2 := createGate(t, path, "family-A", "gate-2")
-	gate3 := createGate(t, path, "family-B", "gate-3")
-
-	defer gate1.Close()
-	defer gate2.Close()
-	defer gate3.Close()
-
 	tier1 := createTier(t, path, "standard", "1")
 	tier2 := createTier(t, path, "standard", "2")
 	tier3 := createTier(t, path, "standard", "3")
@@ -46,6 +38,10 @@ func TestCache(t *testing.T) {
 	populateCollection(t, col1, []string{"id-1"})
 	populateCollection(t, col2, []string{"id-2", "id-3"})
 	populateCollection(t, col3, []string{"id-4", "id-5", "id-6"})
+
+	createGate(t, tier1, "family-A", "gate-1", "workspaces", 1234)
+	createGate(t, tier1, "family-A", "gate-2", "workspaces", 2345)
+	createGate(t, tier2, "family-B", "gate-3", "workspaces", 3456)
 
 	enableGate(t, tier1, "family-A", "gate-1", "workspaces", 1.0)
 	enableGate(t, tier1, "family-A", "gate-2", "workspaces", 1.0)
@@ -100,12 +96,6 @@ func BenchmarkCache(b *testing.B) {
 	defer os.RemoveAll(tmp)
 	path := feature.MountPoint(tmp)
 
-	gate1 := createGate(b, path, "family-A", "gate-1")
-	gate2 := createGate(b, path, "family-A", "gate-2")
-
-	defer gate1.Close()
-	defer gate2.Close()
-
 	tier1 := createTier(b, path, "standard", "1")
 	tier2 := createTier(b, path, "standard", "2")
 
@@ -117,6 +107,12 @@ func BenchmarkCache(b *testing.B) {
 
 	defer col1.Close()
 	defer col2.Close()
+
+	createGate(b, tier1, "family-A", "gate-1", "workspaces", 1234)
+	createGate(b, tier1, "family-A", "gate-2", "workspaces", 2345)
+
+	createGate(b, tier2, "family-A", "gate-1", "workspaces", 1234)
+	createGate(b, tier2, "family-A", "gate-2", "workspaces", 2345)
 
 	enableGate(b, tier1, "family-A", "gate-1", "workspaces", 1.0)
 	enableGate(b, tier1, "family-A", "gate-2", "workspaces", 1.0)

@@ -99,28 +99,23 @@ type cachedTier struct {
 	group string
 	name  string
 	ids   map[string]*idset
-	gates map[string][]cachedEnabledGate
+	gates map[string][]cachedGate
 }
 
 type cachedGate struct {
-	family string
-	name   string
-	salt   string
-}
-
-type cachedEnabledGate struct {
-	*cachedGate
+	name       string
 	collection string
+	salt       string
 	volume     float64
 }
 
-func (g *cachedEnabledGate) open(id string) bool {
+func (g *cachedGate) open(id string) bool {
 	h := acquireBufferedHash64()
 	defer releaseBufferedHash64(h)
 	return g.openWith(id, h)
 }
 
-func (g *cachedEnabledGate) openWith(id string, h *bufferedHash64) bool {
+func (g *cachedGate) openWith(id string, h *bufferedHash64) bool {
 	return openGate(id, g.salt, g.volume, h)
 }
 
@@ -134,32 +129,7 @@ func (path MountPoint) Load() (*Cache, error) {
 	// using this map, so we only retain only one copy of each string value.
 	strings := stringset{}
 
-	type familyGate struct {
-		family string
-		gate   string
-	}
-
-	gates := make(map[familyGate]*cachedGate)
 	tiers := make([]cachedTier, 0)
-
-	if err := Scan(path.Families(), func(family string) error {
-		return Scan(path.Gates(family), func(gate string) error {
-			g, err := path.OpenGate(family, gate)
-			if err != nil {
-				return err
-			}
-			defer g.Close()
-
-			gates[familyGate{family: family, gate: gate}] = &cachedGate{
-				family: strings.load(family),
-				name:   strings.load(gate),
-				salt:   g.Salt(),
-			}
-			return nil
-		})
-	}); err != nil {
-		return nil, err
-	}
 
 	if err := Scan(path.Groups(), func(group string) error {
 		return Scan(path.Tiers(group), func(tier string) error {
@@ -173,27 +143,26 @@ func (path MountPoint) Load() (*Cache, error) {
 				group: strings.load(group),
 				name:  strings.load(tier),
 				ids:   make(map[string]*idset),
-				gates: make(map[string][]cachedEnabledGate),
+				gates: make(map[string][]cachedGate),
 			}
 
 			if err := Scan(t.Families(), func(family string) error {
 				return Scan(t.Gates(family), func(gate string) error {
+					f := strings.load(family)
 					d := readdir(t.gatePath(family, gate))
 					defer d.close()
 
 					for d.next() {
-						g, ok := gates[familyGate{family: family, gate: gate}]
-						if ok {
-							volume, err := readGate(t.gateCollectionPath(family, gate, d.name()))
-							if err != nil {
-								return err
-							}
-							c.gates[g.family] = append(c.gates[g.family], cachedEnabledGate{
-								cachedGate: g,
-								collection: strings.load(d.name()),
-								volume:     volume,
-							})
+						salt, volume, err := t.ReadGate(family, gate, d.name())
+						if err != nil {
+							return err
 						}
+						c.gates[f] = append(c.gates[f], cachedGate{
+							name:       strings.load(gate),
+							collection: strings.load(d.name()),
+							salt:       salt,
+							volume:     volume,
+						})
 					}
 
 					return nil

@@ -22,9 +22,8 @@ func main() {
 			"tier": cli.Command(deleteTier),
 		},
 		"get": cli.CommandSet{
-			"gates":   cli.Command(getGates),
-			"tiers":   cli.Command(getTiers),
-			"enabled": cli.Command(getEnabled),
+			"gates": cli.Command(getGates),
+			"tiers": cli.Command(getTiers),
 		},
 		"add":    cli.Command(add),
 		"remove": cli.Command(remove),

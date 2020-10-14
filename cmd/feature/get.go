@@ -9,30 +9,6 @@ import (
 	"github.com/segmentio/feature"
 )
 
-type getGatesConfig struct {
-	commonConfig
-	outputConfig
-}
-
-func getGates(config getGatesConfig) error {
-	return config.mount(func(path feature.MountPoint) error {
-		return config.table(func(w io.Writer) error {
-			fmt.Fprint(w, "FAMILY\tGATE\tSALT\n")
-			return feature.Scan(path.Families(), func(family string) error {
-				return feature.Scan(path.Gates(family), func(gate string) error {
-					g, err := path.OpenGate(family, gate)
-					if err != nil {
-						return err
-					}
-					defer g.Close()
-					_, err = fmt.Fprintf(w, "%s\t%s\t%s\n", g.Family(), g.Name(), g.Salt())
-					return err
-				})
-			})
-		})
-	})
-}
-
 type getTiersConfig struct {
 	commonConfig
 	outputConfig
@@ -77,12 +53,12 @@ func getTiers(config getTiersConfig) error {
 	})
 }
 
-type getEnabledConfig struct {
+type getGatesConfig struct {
 	commonConfig
 	outputConfig
 }
 
-func getEnabled(config getEnabledConfig, collection collection, id id) error {
+func getGates(config getGatesConfig, collection collection, id id) error {
 	return config.mount(func(path feature.MountPoint) error {
 		return config.table(func(w io.Writer) error {
 			enabled := make(map[string]struct{})
