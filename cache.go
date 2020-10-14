@@ -44,7 +44,7 @@ func (c *Cache) GateOpen(family, gate, collection, id string) bool {
 	for i := range c.tiers {
 		t := &c.tiers[i]
 
-		if t.ids[collection].contains(id) {
+		if ids := t.ids[collection]; ids != nil && ids.contains(id) {
 			f := t.gates[family]
 			i := sort.Search(len(f), func(i int) bool {
 				return f[i].name >= gate
@@ -58,8 +58,6 @@ func (c *Cache) GateOpen(family, gate, collection, id string) bool {
 					return true
 				}
 			}
-
-			return false
 		}
 	}
 
@@ -77,7 +75,7 @@ func (c *Cache) AppendGates(gates []string, family, collection, id string) []str
 	for i := range c.tiers {
 		t := &c.tiers[i]
 
-		if t.ids[collection].contains(id) {
+		if ids := t.ids[collection]; ids != nil && ids.contains(id) {
 			for _, g := range t.gates[family] {
 				if g.collection == collection && g.openWith(id, h) {
 					gates = append(gates, g.name)
