@@ -249,7 +249,9 @@ func mmapIDs(path string) (*idset, error) {
 	forEachLine(m, func(off, _ int) { index = append(index, uint32(off)) })
 
 	ids := &idset{memory: m, index: index}
-	sort.Sort(ids)
+	if !sort.IsSorted(ids) {
+		sort.Sort(ids)
+	}
 	return ids, nil
 }
 

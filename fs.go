@@ -114,7 +114,7 @@ func (d *dir) next() bool {
 		return true
 	}
 
-	names, err := d.file.Readdirnames(32)
+	names, err := d.file.Readdirnames(100)
 	switch err {
 	case nil:
 		d.names, d.index = names, 0

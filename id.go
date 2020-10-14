@@ -83,7 +83,7 @@ func (col *Collection) writeLine(s string) error {
 		return nil
 	}
 	if col.buf == nil {
-		col.buf = bufio.NewWriterSize(col.file, 4096)
+		col.buf = bufio.NewWriter(col.file)
 	}
 	if _, err := col.buf.WriteString(s); err != nil {
 		return err
@@ -112,7 +112,7 @@ func (f *file) next() bool {
 	}
 
 	if f.buf == nil {
-		f.buf = bufio.NewReaderSize(f.file, 4096)
+		f.buf = bufio.NewReader(f.file)
 	}
 
 	for {
