@@ -127,7 +127,7 @@ func (g *cachedGate) openWith(id string, h *bufferedHash64) bool {
 func (path MountPoint) Load() (*Cache, error) {
 	// To minimize the memory footprint of the cache, strings are deduplicated
 	// using this map, so we only retain only one copy of each string value.
-	strings := stringset{}
+	strings := stringCache{}
 
 	tiers := make([]cachedTier, 0)
 
@@ -272,9 +272,9 @@ func forEachLine(b []byte, do func(off, len int)) {
 	}
 }
 
-type stringset map[string]string
+type stringCache map[string]string
 
-func (c stringset) load(s string) string {
+func (c stringCache) load(s string) string {
 	v, ok := c[s]
 	if ok {
 		return v
