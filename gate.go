@@ -76,6 +76,9 @@ func (it *GateEnabledIter) Next() bool {
 			for it.gates.next() {
 				g, err := readGate(filepath.Join(it.gates.path, it.gates.name(), it.collection))
 				if err != nil {
+					if os.IsNotExist(err) {
+						continue
+					}
 					it.err = err
 					it.Close()
 					return false
