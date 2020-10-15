@@ -136,5 +136,10 @@ func (f *file) next() bool {
 
 func readfile(path string) file {
 	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = nil
+		}
+	}
 	return file{file: f, err: err}
 }
