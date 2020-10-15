@@ -13,6 +13,7 @@ import (
 
 func main() {
 	cli.Exec(cli.CommandSet{
+		"benchmark": cli.Command(benchmark),
 		"create": cli.CommandSet{
 			"gate": cli.Command(createGate),
 			"tier": cli.Command(createTier),
