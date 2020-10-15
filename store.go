@@ -8,7 +8,6 @@ import (
 // Store is similar to Cache, but automatically reloads when updates are made
 // to the underlying file system.
 type Store struct {
-	path  MountPoint
 	cache Cache
 	watch *Watcher
 }
@@ -30,35 +29,6 @@ func (s *Store) LookupGates(family, collection, id string) []string {
 	return s.cache.LookupGates(family, collection, id)
 }
 
-func (s *Store) run() {
-	for {
-		select {
-		case _, ok := <-s.watch.Events:
-			if !ok {
-				return
-			}
-			log.Printf("NOTICE feature - %s - reloading feature gates", s.path)
-
-			c, err := s.path.Load()
-			if err != nil {
-				log.Printf("ERROR feature - %s - %s", s.path, err)
-			} else {
-				s.cache.mutex.Lock()
-				s.cache.tiers, c.tiers = c.tiers, s.cache.tiers
-				s.cache.cache.clear()
-				s.cache.mutex.Unlock()
-				c.Close()
-			}
-
-		case err, ok := <-s.watch.Errors:
-			if !ok {
-				return
-			}
-			log.Printf("ERROR feature - %s - %s", s.path, err)
-		}
-	}
-}
-
 // The Open method opens the features at the mount point it was called on,
 // returning a Store object exposing the state.
 //
@@ -77,13 +47,41 @@ func (path MountPoint) Open(period time.Duration) (*Store, error) {
 	}
 
 	s := &Store{
-		path:  path,
 		watch: w,
 		cache: Cache{
 			tiers: c.tiers,
 		},
 	}
 
-	go s.run()
+	go path.watch(s)
 	return s, nil
+}
+
+func (path MountPoint) watch(s *Store) {
+	for {
+		select {
+		case _, ok := <-s.watch.Events:
+			if !ok {
+				return
+			}
+			log.Printf("NOTICE feature - %s - reloading feature gates", path)
+
+			c, err := path.Load()
+			if err != nil {
+				log.Printf("ERROR feature - %s - %s", path, err)
+			} else {
+				s.cache.mutex.Lock()
+				s.cache.tiers, c.tiers = c.tiers, s.cache.tiers
+				s.cache.cache.clear()
+				s.cache.mutex.Unlock()
+				c.Close()
+			}
+
+		case err, ok := <-s.watch.Errors:
+			if !ok {
+				return
+			}
+			log.Printf("ERROR feature - %s - %s", path, err)
+		}
+	}
 }
