@@ -2,6 +2,8 @@ package feature
 
 import (
 	"bytes"
+	"container/list"
+	"hash/maphash"
 	"os"
 	"sort"
 	"sync"
@@ -17,6 +19,7 @@ import (
 // containing the id collections are memory mapped so multiple programs are able
 // to share the memory pages.
 type Cache struct {
+	cache lruCache
 	mutex sync.RWMutex
 	tiers []cachedTier
 }
@@ -33,39 +36,36 @@ func (c *Cache) Close() error {
 	}
 
 	c.tiers = nil
+	c.cache.clear()
 	return nil
 }
 
 // GateOpened returns true if a gate is opened for a given id.
 func (c *Cache) GateOpen(family, gate, collection, id string) bool {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	for i := range c.tiers {
-		t := &c.tiers[i]
-
-		if ids := t.ids[collection]; ids != nil && ids.contains(id) {
-			f := t.gates[family]
-			i := sort.Search(len(f), func(i int) bool {
-				return f[i].name >= gate
-			})
-
-			for _, g := range f[i:] {
-				if g.name != gate {
-					break
-				}
-				if g.collection == collection && g.open(id) {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
+	g := c.LookupGates(family, collection, id)
+	i := sort.Search(len(g), func(i int) bool {
+		return g[i] >= gate
+	})
+	return i < len(g) && g[i] == gate
 }
 
-// AppendGates appends the list of open gates in a family for a given id.
-func (c *Cache) AppendGates(gates []string, family, collection, id string) []string {
+// LookupGates returns the list of open gates in a family for a given id.
+func (c *Cache) LookupGates(family, collection, id string) []string {
+	key := lruCacheKey{
+		family:     family,
+		collection: collection,
+		id:         id,
+	}
+
+	if v := c.cache.lookup(key); v != nil && v.key == key {
+		return v.gates
+	}
+
+	gates := make([]string, 0, 8)
+	defer func() {
+		c.cache.insert(key, gates, 4096)
+	}()
+
 	h := acquireBufferedHash64()
 	defer releaseBufferedHash64(h)
 
@@ -85,12 +85,11 @@ func (c *Cache) AppendGates(gates []string, family, collection, id string) []str
 		}
 	}
 
-	return gates
-}
+	if len(gates) == 0 {
+		gates = nil
+	}
 
-// LookupGates returns the list of open gates in a family for a given id.
-func (c *Cache) LookupGates(family, collection, id string) []string {
-	return c.AppendGates(make([]string, 0, 8), family, collection, id)
+	return gates
 }
 
 type cachedTier struct {
@@ -279,4 +278,85 @@ func (c stringCache) load(s string) string {
 	}
 	c[s] = s
 	return s
+}
+
+var lruCacheSeed = maphash.MakeSeed()
+
+type lruCacheKey struct {
+	family     string
+	collection string
+	id         string
+}
+
+func (k *lruCacheKey) hash(h *maphash.Hash) uint64 {
+	h.WriteString(k.family)
+	h.WriteString(k.collection)
+	h.WriteString(k.id)
+	return h.Sum64()
+}
+
+type lruCacheValue struct {
+	key   lruCacheKey
+	gates []string
+}
+
+type lruCache struct {
+	mutex sync.Mutex
+	queue list.List
+	cache map[uint64]*list.Element
+}
+
+func (c *lruCache) clear() {
+	c.mutex.Lock()
+	c.queue = list.List{}
+	for key := range c.cache {
+		delete(c.cache, key)
+	}
+	c.mutex.Unlock()
+}
+
+func (c *lruCache) insert(key lruCacheKey, gates []string, limit int) {
+	m := maphash.Hash{}
+	m.SetSeed(lruCacheSeed)
+	h := key.hash(&m)
+
+	v := &lruCacheValue{
+		key:   key,
+		gates: gates,
+	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.cache == nil {
+		c.cache = make(map[uint64]*list.Element)
+	}
+
+	e := c.queue.PushBack(v)
+	c.cache[h] = e
+
+	for limit > 0 && len(c.cache) > limit {
+		e := c.queue.Back()
+		v := e.Value.(*lruCacheValue)
+		c.queue.Remove(e)
+		m.Reset()
+		delete(c.cache, v.key.hash(&m))
+	}
+}
+
+func (c *lruCache) lookup(key lruCacheKey) *lruCacheValue {
+	m := maphash.Hash{}
+	m.SetSeed(lruCacheSeed)
+	h := key.hash(&m)
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	e := c.cache[h]
+	if e != nil {
+		c.queue.MoveToFront(e)
+		return e.Value.(*lruCacheValue)
+	}
+
+	return nil
 }

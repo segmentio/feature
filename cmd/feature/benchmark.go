@@ -55,7 +55,7 @@ func benchmark(config benchmarkConfig, family family, gate gate, collection coll
 		}
 
 		elapsed := time.Since(start)
-		fmt.Printf("\t %d\t %03d ns/op\n", config.N, int(float64(elapsed)/float64(config.N)))
+		fmt.Printf("\t %d\t % 3d ns/op\n", config.N, int(float64(elapsed)/float64(config.N)))
 		return nil
 	})
 }

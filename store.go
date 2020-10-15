@@ -25,11 +25,6 @@ func (s *Store) GateOpen(family, gate, collection, id string) bool {
 	return s.cache.GateOpen(family, gate, collection, id)
 }
 
-// AppendGates appends the list of open gates in a family for a given id.
-func (s *Store) AppendGates(gates []string, family, collection, id string) []string {
-	return s.cache.AppendGates(gates, family, collection, id)
-}
-
 // LookupGates returns the list of open gates in a family for a given id.
 func (s *Store) LookupGates(family, collection, id string) []string {
 	return s.cache.LookupGates(family, collection, id)
@@ -50,6 +45,7 @@ func (s *Store) run() {
 			} else {
 				s.cache.mutex.Lock()
 				s.cache.tiers, c.tiers = c.tiers, s.cache.tiers
+				s.cache.cache.clear()
 				s.cache.mutex.Unlock()
 				c.Close()
 			}
