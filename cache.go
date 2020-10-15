@@ -30,8 +30,8 @@ func (c *Cache) Close() error {
 	defer c.mutex.Unlock()
 
 	for i := range c.tiers {
-		for _, ids := range c.tiers[i].ids {
-			ids.unmap()
+		for _, c := range c.tiers[i].collections {
+			c.unmap()
 		}
 	}
 
@@ -75,9 +75,9 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 	for i := range c.tiers {
 		t := &c.tiers[i]
 
-		if ids := t.ids[collection]; ids != nil && ids.contains(id) {
+		if c := t.collections[collection]; c != nil && c.contains(id) {
 			for _, g := range t.gates[family] {
-				if g.collection == collection && g.openWith(id, h) {
+				if g.collection == collection && g.open(id, h) {
 					gates = append(gates, g.name)
 				}
 			}
@@ -93,10 +93,10 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 }
 
 type cachedTier struct {
-	group string
-	name  string
-	ids   map[string]*idset
-	gates map[string][]cachedGate
+	group       string
+	name        string
+	collections map[string]*collection
+	gates       map[string][]cachedGate
 }
 
 type cachedGate struct {
@@ -106,13 +106,7 @@ type cachedGate struct {
 	volume     float64
 }
 
-func (g *cachedGate) open(id string) bool {
-	h := acquireBufferedHash64()
-	defer releaseBufferedHash64(h)
-	return g.openWith(id, h)
-}
-
-func (g *cachedGate) openWith(id string, h *bufferedHash64) bool {
+func (g *cachedGate) open(id string, h *bufferedHash64) bool {
 	return openGate(id, g.salt, g.volume, h)
 }
 
@@ -137,10 +131,10 @@ func (path MountPoint) Load() (*Cache, error) {
 			defer t.Close()
 
 			c := cachedTier{
-				group: strings.load(group),
-				name:  strings.load(tier),
-				ids:   make(map[string]*idset),
-				gates: make(map[string][]cachedGate),
+				group:       strings.load(group),
+				name:        strings.load(tier),
+				collections: make(map[string]*collection),
+				gates:       make(map[string][]cachedGate),
 			}
 
 			if err := Scan(t.Families(), func(family string) error {
@@ -169,11 +163,11 @@ func (path MountPoint) Load() (*Cache, error) {
 			}
 
 			if err := Scan(t.Collections(), func(collection string) error {
-				ids, err := mmapIDs(t.collectionPath(collection))
+				col, err := mmapCollection(t.collectionPath(collection))
 				if err != nil {
 					return err
 				}
-				c.ids[strings.load(collection)] = ids
+				c.collections[strings.load(collection)] = col
 				return nil
 			}); err != nil {
 				return err
@@ -202,33 +196,33 @@ type slice struct {
 	length uint32
 }
 
-type idset struct {
+type collection struct {
 	memory []byte
 	index  []slice
 }
 
-func (ids *idset) at(i int) []byte {
-	slice := ids.index[i]
-	return ids.memory[slice.offset : slice.offset+slice.length]
+func (col *collection) at(i int) []byte {
+	slice := col.index[i]
+	return col.memory[slice.offset : slice.offset+slice.length]
 }
 
-func (ids *idset) contains(id string) bool {
-	i := sort.Search(len(ids.index), func(i int) bool {
-		return string(ids.at(i)) >= id
+func (col *collection) contains(id string) bool {
+	i := sort.Search(len(col.index), func(i int) bool {
+		return string(col.at(i)) >= id
 	})
-	return i < len(ids.index) && string(ids.at(i)) == id
+	return i < len(col.index) && string(col.at(i)) == id
 }
 
-func (ids *idset) unmap() {
-	munmap(ids.memory)
-	ids.memory, ids.index = nil, nil
+func (col *collection) unmap() {
+	munmap(col.memory)
+	col.memory, col.index = nil, nil
 }
 
-func (ids *idset) Len() int           { return len(ids.index) }
-func (ids *idset) Less(i, j int) bool { return string(ids.at(i)) < string(ids.at(j)) }
-func (ids *idset) Swap(i, j int)      { ids.index[i], ids.index[j] = ids.index[j], ids.index[i] }
+func (col *collection) Len() int           { return len(col.index) }
+func (col *collection) Less(i, j int) bool { return string(col.at(i)) < string(col.at(j)) }
+func (col *collection) Swap(i, j int)      { col.index[i], col.index[j] = col.index[j], col.index[i] }
 
-func mmapIDs(path string) (*idset, error) {
+func mmapCollection(path string) (*collection, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -251,11 +245,11 @@ func mmapIDs(path string) (*idset, error) {
 		})
 	})
 
-	ids := &idset{memory: m, index: index}
-	if !sort.IsSorted(ids) {
-		sort.Sort(ids)
+	col := &collection{memory: m, index: index}
+	if !sort.IsSorted(col) {
+		sort.Sort(col)
 	}
-	return ids, nil
+	return col, nil
 }
 
 func forEachLine(b []byte, do func(off, len int)) {
