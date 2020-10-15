@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 type GroupIter struct{ dir }
@@ -126,34 +127,24 @@ func (tier *Tier) CreateGate(family, name, collection string, salt uint32) error
 	if err := mkdir(tier.gatePath(family, name)); err != nil {
 		return err
 	}
-	if err := mkdir(tier.gateCollectionPath(family, name, collection)); err != nil {
-		return err
-	}
-	return writeFile(tier.gateSaltPath(family, name, collection), func(f *os.File) error {
-		_, err := fmt.Fprintf(f, "%d\n", salt)
-		return err
+	return writeGate(tier.gateCollectionPath(family, name, collection), gate{
+		salt: strconv.FormatUint(uint64(salt), 10),
 	})
 }
 
 func (tier *Tier) EnableGate(family, name, collection string, volume float64) error {
-	return writeFile(tier.gateVolumePath(family, name, collection), func(f *os.File) error {
-		_, err := fmt.Fprintf(f, "%g\n", volume)
+	path := tier.gateCollectionPath(family, name, collection)
+	g, err := readGate(path)
+	if err != nil {
 		return err
-	})
+	}
+	g.volume = volume
+	return writeGate(path, g)
 }
 
 func (tier *Tier) ReadGate(family, name, collection string) (salt string, volume float64, err error) {
-	s, err := readGateSalt(tier.gateSaltPath(family, name, collection))
-	if err != nil {
-		return "", 0, err
-	}
-	v, err := readGateVolume(tier.gateVolumePath(family, name, collection))
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return "", 0, err
-		}
-	}
-	return s, v, nil
+	g, err := readGate(tier.gateCollectionPath(family, name, collection))
+	return g.salt, g.volume, err
 }
 
 func (tier *Tier) DeleteGate(family, name, collection string) error {
@@ -174,14 +165,6 @@ func (tier *Tier) collectionPath(collection string) string {
 
 func (tier *Tier) gateCollectionPath(family, name, collection string) string {
 	return filepath.Join(string(tier.path), tier.group, tier.name, "gates", family, name, collection)
-}
-
-func (tier *Tier) gateSaltPath(family, name, collection string) string {
-	return filepath.Join(string(tier.path), tier.group, tier.name, "gates", family, name, collection, "salt")
-}
-
-func (tier *Tier) gateVolumePath(family, name, collection string) string {
-	return filepath.Join(string(tier.path), tier.group, tier.name, "gates", family, name, collection, "volume")
 }
 
 func (tier *Tier) pathTo(path string) string {

@@ -2,15 +2,13 @@ package feature
 
 import (
 	"bytes"
-	"fmt"
 	"hash"
 	"hash/fnv"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
+	"unicode"
 )
 
 type FamilyIter struct{ dir }
@@ -76,27 +74,14 @@ func (it *GateEnabledIter) Next() bool {
 	for {
 		if it.gates.opened() {
 			for it.gates.next() {
-				s, err := readGateSalt(filepath.Join(it.gates.path, it.gates.name(), it.collection, "salt"))
+				g, err := readGate(filepath.Join(it.gates.path, it.gates.name(), it.collection))
 				if err != nil {
-					if os.IsNotExist(err) {
-						continue
-					}
 					it.err = err
 					it.Close()
 					return false
 				}
 
-				v, err := readGateVolume(filepath.Join(it.gates.path, it.gates.name(), it.collection, "volume"))
-				if err != nil {
-					if os.IsNotExist(err) {
-						continue
-					}
-					it.err = err
-					it.Close()
-					return false
-				}
-
-				if openGate(it.id, s, v, it.hash) {
+				if openGate(it.id, g.salt, g.volume, it.hash) {
 					return true
 				}
 			}
@@ -144,28 +129,73 @@ func openGate(id, salt string, volume float64, h *bufferedHash64) bool {
 	return (float64(h.hash.Sum64()%100) + 1) <= (100 * volume)
 }
 
-func readGateFile(path string) ([]byte, error) {
-	return ioutil.ReadFile(path)
+type gate struct {
+	salt   string
+	volume float64
 }
 
-func readGateSalt(path string) (string, error) {
-	b, err := readGateFile(path)
-	return strings.TrimSpace(string(b)), err
+func readGate(path string) (gate, error) {
+	var g gate
+
+	f, err := os.Open(path)
+	if err != nil {
+		return g, err
+	}
+	defer f.Close()
+
+	b, err := mmap(f)
+	if err != nil {
+		return g, err
+	}
+	defer munmap(b)
+
+	forEachLine(b, func(i, n int) {
+		if err != nil {
+			return
+		}
+		k, v := splitKeyValue(bytes.TrimSpace(b[i : i+n]))
+		switch string(k) {
+		case "salt":
+			g.salt = string(v)
+		case "volume":
+			g.volume, err = strconv.ParseFloat(string(v), 64)
+		}
+	})
+
+	if err != nil {
+		err = &os.PathError{Op: "read", Path: path, Err: err}
+	}
+
+	return g, err
 }
 
-func readGateVolume(path string) (float64, error) {
-	b, err := readGateFile(path)
-	if err != nil {
-		return 0, err
+func writeGate(path string, gate gate) error {
+	b := make([]byte, 0, 128)
+
+	if gate.salt != "" {
+		b = append(b, "salt\t"...)
+		b = append(b, gate.salt...)
+		b = append(b, '\n')
 	}
-	v, err := strconv.ParseFloat(strings.TrimSpace(string(b)), 64)
-	if err != nil {
-		return 0, err
+
+	if gate.volume != 0 {
+		b = append(b, "volume\t"...)
+		b = strconv.AppendFloat(b, gate.volume, 'g', -1, 64)
+		b = append(b, '\n')
 	}
-	if v < 0 || v > 1 {
-		return 0, fmt.Errorf("invalid tier gate value out of range: %g", v)
+
+	return writeFile(path, func(f *os.File) error {
+		_, err := f.Write(b)
+		return err
+	})
+}
+
+func splitKeyValue(line []byte) ([]byte, []byte) {
+	i := bytes.IndexFunc(line, unicode.IsSpace)
+	if i < 0 {
+		return bytes.TrimSpace(line), nil
 	}
-	return v, nil
+	return bytes.TrimSpace(line[:i]), bytes.TrimSpace(line[i:])
 }
 
 var hashes sync.Pool // *bufferedHash64
