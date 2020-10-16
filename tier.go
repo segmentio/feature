@@ -96,25 +96,27 @@ func (tier *Tier) GatesCreated(family, gate string) *GateCreatedIter {
 }
 
 func (tier *Tier) GatesEnabled(collection, id string) *GateEnabledIter {
-	return &GateEnabledIter{
-		path:       tier.path,
-		families:   tier.gatesEnabled(collection, id),
-		collection: collection,
-		id:         id,
-	}
-}
-
-func (tier *Tier) gatesEnabled(collection, id string) dir {
 	it := tier.IDs(collection)
 	defer it.Close()
 
+	found := false
 	for it.Next() {
 		if it.Name() == id {
-			return readdir(tier.pathTo("gates"))
+			found = true
+			break
 		}
 	}
 
-	return dir{}
+	if !found {
+		id = ""
+	}
+
+	return &GateEnabledIter{
+		path:       tier.path,
+		families:   readdir(tier.pathTo("gates")),
+		collection: collection,
+		id:         id,
+	}
 }
 
 func (tier *Tier) CreateGate(family, name, collection string, salt uint32) error {
@@ -132,19 +134,19 @@ func (tier *Tier) CreateGate(family, name, collection string, salt uint32) error
 	})
 }
 
-func (tier *Tier) EnableGate(family, name, collection string, volume float64) error {
+func (tier *Tier) EnableGate(family, name, collection string, volume float64, open bool) error {
 	path := tier.gateCollectionPath(family, name, collection)
 	g, err := readGate(path)
 	if err != nil {
 		return err
 	}
-	g.volume = volume
+	g.open, g.volume = open, volume
 	return writeGate(path, g)
 }
 
-func (tier *Tier) ReadGate(family, name, collection string) (salt string, volume float64, err error) {
+func (tier *Tier) ReadGate(family, name, collection string) (open bool, salt string, volume float64, err error) {
 	g, err := readGate(tier.gateCollectionPath(family, name, collection))
-	return g.salt, g.volume, err
+	return g.open, g.salt, g.volume, err
 }
 
 func (tier *Tier) DeleteGate(family, name, collection string) error {

@@ -74,14 +74,15 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 
 	for i := range c.tiers {
 		t := &c.tiers[i]
+		c := t.collections[collection]
+		exists := c != nil && c.contains(id)
 
-		if c := t.collections[collection]; c != nil && c.contains(id) {
-			for _, g := range t.gates[family] {
-				if g.collection == collection && g.open(id, h) {
+		for _, g := range t.gates[family] {
+			if g.collection == collection {
+				if (exists && openGate(id, g.salt, g.volume, h)) || (!exists && g.open) {
 					gates = append(gates, g.name)
 				}
 			}
-			break
 		}
 	}
 
@@ -104,10 +105,7 @@ type cachedGate struct {
 	collection string
 	salt       string
 	volume     float64
-}
-
-func (g *cachedGate) open(id string, h *bufferedHash64) bool {
-	return openGate(id, g.salt, g.volume, h)
+	open       bool
 }
 
 // The Laod method loads the features at the mount point it is called on,
@@ -144,7 +142,7 @@ func (path MountPoint) Load() (*Cache, error) {
 					defer d.close()
 
 					for d.next() {
-						salt, volume, err := t.ReadGate(family, gate, d.name())
+						open, salt, volume, err := t.ReadGate(family, gate, d.name())
 						if err != nil {
 							return err
 						}
@@ -153,6 +151,7 @@ func (path MountPoint) Load() (*Cache, error) {
 							collection: strings.load(d.name()),
 							salt:       salt,
 							volume:     volume,
+							open:       open,
 						})
 					}
 

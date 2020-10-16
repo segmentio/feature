@@ -43,9 +43,9 @@ func TestCache(t *testing.T) {
 	createGate(t, tier1, "family-A", "gate-2", "workspaces", 2345)
 	createGate(t, tier2, "family-B", "gate-3", "workspaces", 3456)
 
-	enableGate(t, tier1, "family-A", "gate-1", "workspaces", 1.0)
-	enableGate(t, tier1, "family-A", "gate-2", "workspaces", 1.0)
-	enableGate(t, tier2, "family-B", "gate-3", "workspaces", 1.0)
+	enableGate(t, tier1, "family-A", "gate-1", "workspaces", 1.0, false)
+	enableGate(t, tier1, "family-A", "gate-2", "workspaces", 1.0, false)
+	enableGate(t, tier2, "family-B", "gate-3", "workspaces", 1.0, false)
 
 	cache, err := path.Load()
 	if err != nil {
@@ -114,11 +114,11 @@ func BenchmarkCache(b *testing.B) {
 	createGate(b, tier2, "family-A", "gate-1", "workspaces", 1234)
 	createGate(b, tier2, "family-A", "gate-2", "workspaces", 2345)
 
-	enableGate(b, tier1, "family-A", "gate-1", "workspaces", 1.0)
-	enableGate(b, tier1, "family-A", "gate-2", "workspaces", 1.0)
+	enableGate(b, tier1, "family-A", "gate-1", "workspaces", 1.0, false)
+	enableGate(b, tier1, "family-A", "gate-2", "workspaces", 1.0, false)
 
-	enableGate(b, tier2, "family-A", "gate-1", "workspaces", 0.0)
-	enableGate(b, tier2, "family-A", "gate-2", "workspaces", 0.0)
+	enableGate(b, tier2, "family-A", "gate-1", "workspaces", 0.0, false)
+	enableGate(b, tier2, "family-A", "gate-2", "workspaces", 0.0, false)
 
 	const N = 10e3
 	prng := rand.New(rand.NewSource(0))

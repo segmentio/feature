@@ -2,8 +2,10 @@ package feature
 
 import (
 	"bytes"
+	"fmt"
 	"hash"
 	"hash/fnv"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -84,7 +86,11 @@ func (it *GateEnabledIter) Next() bool {
 					return false
 				}
 
-				if openGate(it.id, g.salt, g.volume, it.hash) {
+				if it.id == "" {
+					if g.open {
+						return true
+					}
+				} else if openGate(it.id, g.salt, g.volume, it.hash) {
 					return true
 				}
 			}
@@ -133,6 +139,7 @@ func openGate(id, salt string, volume float64, h *bufferedHash64) bool {
 }
 
 type gate struct {
+	open   bool
 	salt   string
 	volume float64
 }
@@ -158,6 +165,8 @@ func readGate(path string) (gate, error) {
 		}
 		k, v := splitKeyValue(bytes.TrimSpace(b[i : i+n]))
 		switch string(k) {
+		case "open":
+			g.open, err = strconv.ParseBool(string(v))
 		case "salt":
 			g.salt = string(v)
 		case "volume":
@@ -173,24 +182,30 @@ func readGate(path string) (gate, error) {
 }
 
 func writeGate(path string, gate gate) error {
-	b := make([]byte, 0, 128)
+	b := new(bytes.Buffer)
 
-	if gate.salt != "" {
-		b = append(b, "salt\t"...)
-		b = append(b, gate.salt...)
-		b = append(b, '\n')
-	}
-
-	if gate.volume != 0 {
-		b = append(b, "volume\t"...)
-		b = strconv.AppendFloat(b, gate.volume, 'g', -1, 64)
-		b = append(b, '\n')
+	for _, e := range [...]struct {
+		key   string
+		value interface{}
+	}{
+		{key: "open", value: gate.open},
+		{key: "salt", value: gate.salt},
+		{key: "volume", value: gate.volume},
+	} {
+		if err := writeKeyValue(b, e.key, e.value); err != nil {
+			return err
+		}
 	}
 
 	return writeFile(path, func(f *os.File) error {
-		_, err := f.Write(b)
+		_, err := b.WriteTo(f)
 		return err
 	})
+}
+
+func writeKeyValue(w io.Writer, key string, value interface{}) error {
+	_, err := fmt.Fprintf(w, "%s\t%v\n", key, value)
+	return err
 }
 
 func splitKeyValue(line []byte) ([]byte, []byte) {
