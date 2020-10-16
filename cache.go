@@ -75,12 +75,15 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 	for i := range c.tiers {
 		t := &c.tiers[i]
 		c := t.collections[collection]
-		exists := c != nil && c.contains(id)
 
-		for _, g := range t.gates[family] {
-			if g.collection == collection {
-				if (exists && openGate(id, g.salt, g.volume, h)) || (!exists && g.open) {
-					gates = append(gates, g.name)
+		if c != nil {
+			exists := c.contains(id)
+
+			for _, g := range t.gates[family] {
+				if g.collection == collection {
+					if (exists && openGate(id, g.salt, g.volume, h)) || (!exists && g.open) {
+						gates = append(gates, g.name)
+					}
 				}
 			}
 		}
