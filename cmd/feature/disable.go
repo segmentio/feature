@@ -20,6 +20,6 @@ func disable(config disableConfig, group group, tier tier, family family, gate g
 			return err
 		}
 		defer t.Close()
-		return t.EnableGate(string(family), string(gate), string(collection), 0)
+		return t.EnableGate(string(family), string(gate), string(collection), 0, false)
 	})
 }

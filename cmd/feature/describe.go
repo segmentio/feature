@@ -66,7 +66,7 @@ func describeTier(config describeTierConfig, group group, tier tier) error {
 			fmt.Fprint(w, "Collections:\n")
 
 			if err := feature.Scan(t.Collections(), func(collection string) error {
-				_, err := fmt.Fprintf(w, "  %s\n", collection)
+				_, err := fmt.Fprintf(w, " - %s\n", collection)
 				return err
 			}); err != nil {
 				return err
@@ -81,11 +81,11 @@ func describeTier(config describeTierConfig, group group, tier tier) error {
 					}
 
 					return feature.Scan(t.GatesCreated(family, gate), func(collection string) error {
-						_, volume, err := t.ReadGate(family, gate, collection)
+						open, _, volume, err := t.ReadGate(family, gate, collection)
 						if err != nil {
 							return err
 						}
-						_, err = fmt.Fprintf(w, "  - %s\t(%.0f%%)\n", collection, volume*100)
+						_, err = fmt.Fprintf(w, "  - %s\t(%.0f%%, default: %s)\n", collection, volume*100, openFormat(open))
 						return err
 					})
 				})
@@ -96,4 +96,14 @@ func describeTier(config describeTierConfig, group group, tier tier) error {
 			return nil
 		})
 	})
+}
+
+type openFormat bool
+
+func (open openFormat) Format(w fmt.State, _ rune) {
+	if open {
+		io.WriteString(w, "open")
+	} else {
+		io.WriteString(w, "close")
+	}
 }

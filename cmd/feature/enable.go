@@ -10,6 +10,7 @@ import (
 
 type enableConfig struct {
 	commonConfig
+	Open bool `flag:"-o,--open" help:"Sets the default state of the gate to open"`
 }
 
 func enable(config enableConfig, group group, tier tier, family family, gate gate, collection collection, volume human.Ratio) error {
@@ -22,6 +23,6 @@ func enable(config enableConfig, group group, tier tier, family family, gate gat
 			return err
 		}
 		defer t.Close()
-		return t.EnableGate(string(family), string(gate), string(collection), float64(volume))
+		return t.EnableGate(string(family), string(gate), string(collection), float64(volume), config.Open)
 	})
 }
