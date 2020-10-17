@@ -115,8 +115,8 @@ volume	1
 The gate files contain key value pairs for the few properties of a gate,
 which determine which of the identifiers will see the gate open or closed.
 
-| Key    | Value                                                                                                |
-| ------ | ---------------------------------------------------------------------------------------------------- |
-| open   | true/false, indicates the default behavior for identifiers that aren't in the collection file        |
-| salt   | a random value injected in the hash function used to determine the gate open state                   |
-| volume | a floating point number between 0 and 1 defining the volume of identifiers that the gate is open for |
+| Key    | Value                                                                                              |
+| ------ | -------------------------------------------------------------------------------------------------- |
+| open   | true/false, indicates the default behavior for identifiers that aren't in the collection file      |
+| salt   | random value injected in the hash function used to determine the gate open state                   |
+| volume | floating point number between 0 and 1 defining the volume of identifiers that the gate is open for |
