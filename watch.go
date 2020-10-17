@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,18 +34,19 @@ func (w *Watcher) Close() error {
 
 // Watch creates a watcher which gets notifications when changes are made to the
 // mount point.
-//
-// The period passed as argument represents the minimal time interval between
-// updates reported by the watcher. This is useful to avoid receiving too many
-// notifications if the mount point is being modified repeatedly; all events
-// occuring within a period will be merged into one.
-func (path MountPoint) Watch(period time.Duration) (*Watcher, error) {
+func (path MountPoint) Watch() (*Watcher, error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
 
-	if err := w.Add(filepath.Dir(string(path))); err != nil {
+	if err := w.Add(string(path)); err != nil {
+		w.Close()
+		return nil, err
+	}
+
+	target, err := filepath.EvalSymlinks(string(path))
+	if err != nil {
 		w.Close()
 		return nil, err
 	}
@@ -77,26 +79,31 @@ func (path MountPoint) Watch(period time.Duration) (*Watcher, error) {
 			}
 		}
 
-		notify := false
-		ticker := time.NewTicker(period)
-		defer ticker.Stop()
-
-		base := filepath.Base(string(path))
 		for {
 			select {
 			case e := <-w.Events:
-				if filepath.Base(e.Name) == base {
-					notify = true
+				if strings.HasSuffix(e.Name, target) {
+					newTarget, err := filepath.EvalSymlinks(string(path))
+					if err != nil {
+						onError(err)
+						continue
+					}
+
+					if newTarget == target {
+						continue
+					}
+
+					if err := w.Add(string(path)); err != nil {
+						onError(err)
+						continue
+					}
+
+					target = newTarget
+					onReady()
 				}
 
 			case e := <-w.Errors:
 				onError(e)
-
-			case <-ticker.C:
-				if notify {
-					onReady()
-					notify = false
-				}
 
 			case <-watcher.done:
 				return
@@ -109,20 +116,31 @@ func (path MountPoint) Watch(period time.Duration) (*Watcher, error) {
 
 // Wait blocks until the path exists or ctx is cancelled.
 func (path MountPoint) Wait(ctx context.Context) error {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	const minDelay = 100 * time.Millisecond
+	const maxDelay = 1 * time.Second
+	delay := minDelay
+
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
 
 	for {
-		switch _, err := os.Stat(string(path)); {
+		switch _, err := os.Lstat(string(path)); {
 		case err == nil:
 			return nil
 		case !os.IsNotExist(err):
 			return err
 		}
+
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
+
+		if delay += minDelay; delay > maxDelay {
+			delay = maxDelay
+		}
+
+		timer.Reset(delay)
 	}
 }

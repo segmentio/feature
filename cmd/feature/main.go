@@ -42,11 +42,6 @@ type commonConfig struct {
 }
 
 func (c *commonConfig) mount(do func(feature.MountPoint) error) error {
-	if err := os.Mkdir(string(c.Path), 0755); err != nil {
-		if !os.IsExist(err) {
-			return err
-		}
-	}
 	p, err := feature.Mount(string(c.Path))
 	if err != nil {
 		return err

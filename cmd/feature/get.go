@@ -1,16 +1,60 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log"
+	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/segmentio/feature"
 )
 
-type getTiersConfig struct {
+type getConfig struct {
 	commonConfig
+	Watch bool `flag:"-w,--watch" help:"Runs the command then blocks waiting for changes and runs the command again"`
+}
+
+func (c *getConfig) mount(do func(feature.MountPoint) error) error {
+	return c.commonConfig.mount(func(path feature.MountPoint) error {
+		if !c.Watch {
+			return do(path)
+		}
+
+		if err := path.Wait(context.Background()); err != nil {
+			return err
+		}
+
+		w, err := path.Watch()
+		if err != nil {
+			return err
+		}
+		defer w.Close()
+
+		sigch := make(chan os.Signal, 1)
+		signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
+
+		for {
+			if err := do(path); err != nil {
+				log.Print(err)
+			}
+			select {
+			case <-w.Events:
+			case err := <-w.Errors:
+				log.Print(err)
+			case <-sigch:
+				return nil
+			}
+		}
+	})
+}
+
+type getTiersConfig struct {
+	getConfig
 	outputConfig
 }
 
@@ -54,7 +98,7 @@ func getTiers(config getTiersConfig) error {
 }
 
 type getGatesConfig struct {
-	commonConfig
+	getConfig
 	outputConfig
 }
 

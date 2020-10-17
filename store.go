@@ -2,7 +2,6 @@ package feature
 
 import (
 	"log"
-	"time"
 )
 
 // Store is similar to Cache, but automatically reloads when updates are made
@@ -34,8 +33,8 @@ func (s *Store) LookupGates(family, collection, id string) []string {
 //
 // The returned store holds operating system resources and therefore must be
 // closed when the program does not need it anymore.
-func (path MountPoint) Open(period time.Duration) (*Store, error) {
-	w, err := path.Watch(period)
+func (path MountPoint) Open() (*Store, error) {
+	w, err := path.Watch()
 	if err != nil {
 		return nil, err
 	}
