@@ -1,0 +1,16 @@
+steps:
+- label: test
+  env:
+    SEGMENT_CONTEXTS: snyk,aws-credentials
+    SEGMENT_BUILDKITE_IMAGE: buildkite-agent-golang1.15
+  agents:
+    queue: v1
+  commands:
+  - go mod vendor
+  - go test -v
+  plugins:
+  - ssh://git@github.com/segmentio/cache-buildkite-plugin#v3.0.0:
+      key: feature-modules-{{ checksum 'go.mod' }}
+      paths:
+      - vendor/
+      save: true
