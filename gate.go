@@ -155,7 +155,7 @@ func readGate(path string) (gate, error) {
 
 	b, err := mmap(f)
 	if err != nil {
-		return g, err
+		return g, &os.PathError{Op: "mmap", Path: path, Err: err}
 	}
 	defer munmap(b)
 

@@ -63,7 +63,7 @@ func describeTier(config describeTierConfig, group group, tier tier) error {
 
 			fmt.Fprintf(w, "Group:\t%s\n", group)
 			fmt.Fprintf(w, "Tier:\t%s\n", tier)
-			fmt.Fprint(w, "Collections:\n")
+			fmt.Fprint(w, "\nCollections:\n")
 
 			if err := feature.Scan(t.Collections(), func(collection string) error {
 				_, err := fmt.Fprintf(w, " - %s\n", collection)
@@ -72,21 +72,20 @@ func describeTier(config describeTierConfig, group group, tier tier) error {
 				return err
 			}
 
-			fmt.Fprintf(w, "Gates:\n")
+			fmt.Fprintf(w, "\nGates:\n")
 
 			if err := feature.Scan(t.Families(), func(family string) error {
 				return feature.Scan(t.Gates(family), func(gate string) error {
-					if _, err := fmt.Fprintf(w, "  %s/%s:\n", family, gate); err != nil {
-						return err
-					}
+					fmt.Fprintf(w, "  %s/%s\n", family, gate)
+					defer fmt.Fprintln(w)
 
 					return feature.Scan(t.GatesCreated(family, gate), func(collection string) error {
 						open, _, volume, err := t.ReadGate(family, gate, collection)
 						if err != nil {
 							return err
 						}
-						_, err = fmt.Fprintf(w, "  - %s\t(%.0f%%, default: %s)\n", collection, volume*100, openFormat(open))
-						return err
+						fmt.Fprintf(w, "  - %s\t(%.0f%%, default: %s)\n", collection, volume*100, openFormat(open))
+						return nil
 					})
 				})
 			}); err != nil {
