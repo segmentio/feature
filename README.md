@@ -193,13 +193,13 @@ pkpdcdSLNX14Za6qpD7wtv
 _Note: the identifiers are not displayed in any particular order, this command
 simply iterate over the directories and scans the collection files._
 
-### feature describe tier [group] [tier]
+### `feature describe tier [group] [tier]`
 
 This command shows a verbose description of a tier, including the list of
 collections, and the state of each gate in the tier:
 
 ```
-$ `feature describe tier standard 1`
+$ feature describe tier standard 1
 Group:	standard
 Tier:	1
 
