@@ -288,7 +288,9 @@ Another common use case is for programs to lookup the list of gates that are
 enabled on an identifier. The `LookupGates` method solves for this use case.
 
 ```go
-gates := features.LookupGates("gate-family", "collection", "1234")
+for _, gate := range features.LookupGates("gate-family", "collection", "1234") {
+    ...
+}
 ```
 
 _Note: the `feature.Store` type uses an internal cache to optimize gate lookups,
