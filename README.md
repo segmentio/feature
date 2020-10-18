@@ -142,7 +142,7 @@ $ export FEATURE_PATH=/path/to/features
 
 By default, the `$HOME/feature` directory is used.
 
-### feature get gates [collection] [id]
+### `feature get gates [collection] [id]`
 
 This command prints the list of gates enabled for an identifier, it is useful
 to determine whether a gate is open for a given id, for example:
@@ -152,7 +152,7 @@ to determine whether a gate is open for a given id, for example:
 $ feature get gates source B458ru47n7 | grep gate-family | grep gate-name
 ```
 
-### feature get tiers
+### `feature get tiers`
 
 This command prints a summary of the tiers that exist in the feature database,
 here is an example:
@@ -170,7 +170,7 @@ standard   2     3            19        107
 standard   5     3            18        40
 ```
 
-### feature describe collection [-g group] [-t tier] [collection]
+### `feature describe collection [-g group] [-t tier] [collection]`
 
 This command prints the list of identifiers in a collection, optinally filtering
 on a group and tier (by default all groups and tiers are shown).
@@ -199,7 +199,7 @@ This command shows a verbose description of a tier, including the list of
 collections, and the state of each gate in the tier:
 
 ```
-$ feature describe tier standard 1
+$ `feature describe tier standard 1`
 Group:	standard
 Tier:	1
 
