@@ -220,3 +220,77 @@ Gates:
 
 ...
 ```
+
+## Using the Go API
+
+The `feature` package provides APIs to consume the feature gate data set, this
+section presents on the most common use cases that programs have and how they
+are solved by the package.
+
+```go
+import (
+    "github.com/segmentio/feature"
+)
+```
+
+### `feature.MountPoint`
+
+The `feature.MountPoint` type represents a path on the file system where a
+feature database is mounted. This type is the entry point to all other APIs,
+typically a program will construct one mount point from a configuration option
+or environment variable:
+
+```go
+mountPoint := feature.MountPoint("/path/to/features")
+```
+
+_Note: prefer using an absolute path for the mount point, so operations are
+not dependent on the working directory._
+
+### `feature.Store`
+
+From a mount point, a program can open a feature database, which is materialized
+by a `feature.Store` object.
+
+```go
+features, err := mountPoint.Open()
+if err != nil {
+    fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+} else {
+    ...
+}
+```
+
+The `feature.Store` type will watch for changes to the mount point, and
+automatically reload the content of the feature database when a change is
+detected. This mechanism assumes that the feature database is immutable,
+programs that intend to apply updates to the database must recreate it and
+replace the entire directory structure (which should be done in an atomic
+fashion via the use of the `rename(2)` syscall for example).
+
+### `feature.(*Store).OpenGate`
+
+This is the most common use case for programs, the `OpenGate` method tests
+whether a gate is open for a given identifier.
+
+The gate is defined by the pair of gate family and name, while the identifier
+is expressed as a pair of the collection and its value.
+
+```go
+if features.OpenGate("gate-family", "gate-name", "collection", "1234") {
+    ...
+}
+```
+
+### `feature.(*Store).LookupGates`
+
+Another common use case is for programs to lookup the list of gates that are
+enabled on an identifier. The `LookupGates` method solves for this use case.
+
+```go
+gates := features.LookupGates("gate-family", "collection", "1234")
+```
+
+_Note: the `feature.Store` type uses an internal cache to optimize gate lookups,
+programs must treat the returned slice as an immutable value to avoid race
+conditions. If the slice needs to be modified, a copy must be made first._
