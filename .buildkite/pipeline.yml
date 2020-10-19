@@ -14,3 +14,16 @@ steps:
       paths:
       - vendor/
       save: true
+- label: publish
+  env:
+    SEGMENT_CONTEXTS: snyk,aws-credentials
+    SEGMENT_BUILDKITE_IMAGE: buildkite-agent-golang1.15
+  agents:
+    queue: v1
+  commands:
+  - make publish branch=$BUILDKITE_BRANCH commit=$BUILDKITE_SHORT_COMMIT
+  plugins:
+  - ssh://git@github.com/segmentio/cache-buildkite-plugin#v3.0.0:
+      key: feature-modules-{{ checksum 'go.mod' }}
+      paths:
+      - vendor/
