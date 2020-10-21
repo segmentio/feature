@@ -70,10 +70,12 @@ func (path MountPoint) Open() (*Store, error) {
 func (path MountPoint) watch(s *Store) {
 	defer s.join.Done()
 	defer fs.Stop(s.notify)
+	log.Printf("NOTICE feature - %s - watching for changes on the feature database", path)
 
 	for {
 		select {
 		case <-s.notify:
+			log.Printf("NOTICE feature - %s - reloading feature database after detecting update", path)
 			if err := fs.Notify(s.notify, string(path)); err != nil {
 				log.Printf("CRIT feature - %s - %s", path, err)
 			}
@@ -100,11 +102,13 @@ func (path MountPoint) Wait(ctx context.Context) error {
 		}
 		_, err := os.Lstat(string(path))
 		if err == nil {
+			log.Printf("INFO feature - %s - feature database exists", path)
 			return nil
 		}
 		if !os.IsNotExist(err) {
 			return err
 		}
+		log.Printf("NOTICE feature - %s - waiting for feature database to be created", path)
 		select {
 		case <-notify:
 		case <-ctx.Done():

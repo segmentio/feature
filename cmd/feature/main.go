@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"text/tabwriter"
 
@@ -12,6 +14,7 @@ import (
 )
 
 func main() {
+	log.SetOutput(ioutil.Discard)
 	cli.Exec(cli.CommandSet{
 		"benchmark": cli.Command(benchmark),
 		"create": cli.CommandSet{
