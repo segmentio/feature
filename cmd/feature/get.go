@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/segmentio/feature"
+	"github.com/segmentio/fs"
 )
 
 type getConfig struct {
@@ -29,23 +30,21 @@ func (c *getConfig) mount(do func(feature.MountPoint) error) error {
 			return err
 		}
 
-		w, err := path.Watch()
-		if err != nil {
-			return err
-		}
-		defer w.Close()
+		notify := make(chan string)
+		defer fs.Stop(notify)
 
 		sigch := make(chan os.Signal, 1)
 		signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 
 		for {
+			if err := fs.Notify(notify, string(path)); err != nil {
+				return err
+			}
 			if err := do(path); err != nil {
 				log.Print(err)
 			}
 			select {
-			case <-w.Events:
-			case err := <-w.Errors:
-				log.Print(err)
+			case <-notify:
 			case <-sigch:
 				return nil
 			}

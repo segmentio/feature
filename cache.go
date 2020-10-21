@@ -24,6 +24,14 @@ type Cache struct {
 	tiers []cachedTier
 }
 
+func (c *Cache) swap(x *Cache) *Cache {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.tiers, x.tiers = x.tiers, c.tiers
+	c.cache.clear()
+	return x
+}
+
 // Close releases resources held by the cache.
 func (c *Cache) Close() error {
 	c.mutex.Lock()
