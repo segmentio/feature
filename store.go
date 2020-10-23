@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/segmentio/fs"
 )
@@ -75,14 +76,16 @@ func (path MountPoint) watch(s *Store) {
 	for {
 		select {
 		case <-s.notify:
-			log.Printf("NOTICE feature - %s - reloading feature database after detecting update", path)
+			log.Printf("INFO feature - %s - reloading feature database after detecting update", path)
 			if err := fs.Notify(s.notify, string(path)); err != nil {
 				log.Printf("CRIT feature - %s - %s", path, err)
 			}
+			start := time.Now()
 			c, err := path.Load()
 			if err != nil {
 				log.Printf("ERROR feature - %s - %s", path, err)
 			} else {
+				log.Printf("NOTICE feature - %s - feature database reloaded in %gs", path, time.Since(start).Round(time.Millisecond).Seconds())
 				c = s.cache.swap(c)
 				c.Close()
 			}
