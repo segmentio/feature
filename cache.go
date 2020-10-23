@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"hash/maphash"
 	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 )
@@ -126,6 +127,14 @@ type cachedGate struct {
 // The returned cache holds operating system resources and therefore must be
 // closed when the program does not need it anymore.
 func (path MountPoint) Load() (*Cache, error) {
+	// Resolves symlinks first so we know that the underlying directory
+	// structure will not change across reads from the file system when
+	// loading the cache.
+	p, err := filepath.EvalSymlinks(string(path))
+	if err != nil {
+		return nil, err
+	}
+	path = MountPoint(p)
 	// To minimize the memory footprint of the cache, strings are deduplicated
 	// using this map, so we only retain only one copy of each string value.
 	strings := stringCache{}
