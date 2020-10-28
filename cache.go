@@ -98,12 +98,30 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 	if len(gates) == 0 {
 		gates = nil
 	} else {
+		gates = deduplicate(gates)
 		// Safe guard in case the program appends to the slice, it will force
 		// the reallocation and copy.
 		gates = gates[:len(gates):len(gates)]
 	}
 
 	return gates
+}
+
+func deduplicate(s []string) []string {
+	n := 0
+
+	for i := 1; i < len(s); i++ {
+		if s[i] != s[n] {
+			n++
+			s[n] = s[i]
+		}
+	}
+
+	for i := n + 1; i < len(s); i++ {
+		s[i] = ""
+	}
+
+	return s[:n+1]
 }
 
 type cachedTier struct {
