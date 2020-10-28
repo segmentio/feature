@@ -98,6 +98,7 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 	if len(gates) == 0 {
 		gates = nil
 	} else {
+		sort.Strings(gates)
 		gates = deduplicate(gates)
 		// Safe guard in case the program appends to the slice, it will force
 		// the reallocation and copy.
