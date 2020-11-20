@@ -143,7 +143,7 @@ func strip(s []string, disabled map[string]struct{}) []string {
 		}
 	}
 
-	for i := n + 1; i < len(s); i++ {
+	for i := n; i < len(s); i++ {
 		s[i] = ""
 	}
 
