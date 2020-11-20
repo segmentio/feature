@@ -70,6 +70,7 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 		return v.gates
 	}
 
+	disabled := make(map[string]struct{})
 	gates := make([]string, 0, 8)
 	defer func() {
 		c.cache.insert(key, gates, 4096)
@@ -88,7 +89,13 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 
 		for _, g := range t.gates[family] {
 			if g.collection == collection {
-				if (exists && openGate(id, g.salt, g.volume, h)) || (!exists && g.open) {
+				if exists {
+					if openGate(id, g.salt, g.volume, h) {
+						gates = append(gates, g.name)
+					} else {
+						disabled[g.name] = struct{}{}
+					}
+				} else if g.open {
 					gates = append(gates, g.name)
 				}
 			}
@@ -100,6 +107,7 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 	} else {
 		sort.Strings(gates)
 		gates = deduplicate(gates)
+		gates = strip(gates, disabled)
 		// Safe guard in case the program appends to the slice, it will force
 		// the reallocation and copy.
 		gates = gates[:len(gates):len(gates)]
@@ -123,6 +131,23 @@ func deduplicate(s []string) []string {
 	}
 
 	return s[:n+1]
+}
+
+func strip(s []string, disabled map[string]struct{}) []string {
+	n := 0
+
+	for _, x := range s {
+		if _, skip := disabled[x]; !skip {
+			s[n] = x
+			n++
+		}
+	}
+
+	for i := n + 1; i < len(s); i++ {
+		s[i] = ""
+	}
+
+	return s[:n]
 }
 
 type cachedTier struct {

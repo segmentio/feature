@@ -104,6 +104,7 @@ type getGatesConfig struct {
 func getGates(config getGatesConfig, collection collection, id id) error {
 	return config.mount(func(path feature.MountPoint) error {
 		return config.table(func(w io.Writer) error {
+			disabled := make(map[string]struct{})
 			enabled := make(map[string]struct{})
 
 			if err := feature.Scan(path.Groups(), func(group string) error {
@@ -121,10 +122,21 @@ func getGates(config getGatesConfig, collection collection, id id) error {
 						return err
 					}
 
+					if err := feature.Scan(t.GatesDisabled(string(collection), string(id)), func(name string) error {
+						disabled[name] = struct{}{}
+						return nil
+					}); err != nil {
+						return err
+					}
+
 					return nil
 				})
 			}); err != nil {
 				return err
+			}
+
+			for name := range disabled {
+				delete(enabled, name)
 			}
 
 			if len(enabled) == 0 {

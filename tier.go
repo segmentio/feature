@@ -96,6 +96,26 @@ func (tier *Tier) GatesCreated(family, gate string) *GateCreatedIter {
 }
 
 func (tier *Tier) GatesEnabled(collection, id string) *GateEnabledIter {
+	id, families := tier.gates(collection, id)
+	return &GateEnabledIter{
+		path:       tier.path,
+		families:   families,
+		collection: collection,
+		id:         id,
+	}
+}
+
+func (tier *Tier) GatesDisabled(collection, id string) *GateDisabledIter {
+	id, families := tier.gates(collection, id)
+	return &GateDisabledIter{
+		path:       tier.path,
+		families:   families,
+		collection: collection,
+		id:         id,
+	}
+}
+
+func (tier *Tier) gates(collection, id string) (string, dir) {
 	it := tier.IDs(collection)
 	defer it.Close()
 
@@ -111,12 +131,7 @@ func (tier *Tier) GatesEnabled(collection, id string) *GateEnabledIter {
 		id = ""
 	}
 
-	return &GateEnabledIter{
-		path:       tier.path,
-		families:   readdir(tier.pathTo("gates")),
-		collection: collection,
-		id:         id,
-	}
+	return id, readdir(tier.pathTo("gates"))
 }
 
 func (tier *Tier) CreateGate(family, name, collection string, salt uint32) error {

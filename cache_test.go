@@ -41,11 +41,13 @@ func TestCache(t *testing.T) {
 
 	createGate(t, tier1, "family-A", "gate-1", "workspaces", 1234)
 	createGate(t, tier1, "family-A", "gate-2", "workspaces", 2345)
-	createGate(t, tier2, "family-B", "gate-3", "workspaces", 3456)
+	createGate(t, tier1, "family-B", "gate-3", "workspaces", 3456)
+	createGate(t, tier2, "family-B", "gate-3", "workspaces", 7890)
 
 	enableGate(t, tier1, "family-A", "gate-1", "workspaces", 1.0, false)
 	enableGate(t, tier1, "family-A", "gate-2", "workspaces", 1.0, false)
-	enableGate(t, tier2, "family-B", "gate-3", "workspaces", 1.0, false)
+	enableGate(t, tier1, "family-B", "gate-3", "workspaces", 0.0, false)
+	enableGate(t, tier2, "family-B", "gate-3", "workspaces", 1.0, true)
 
 	cache, err := path.Load()
 	if err != nil {
@@ -56,6 +58,17 @@ func TestCache(t *testing.T) {
 	expectGateOpened(t, cache, "family-A", "gate-1", "workspaces", "id-1")
 	expectGateClosed(t, cache, "family-A", "gate-1", "workspaces", "id-2")
 	expectGateLookup(t, cache, "family-A", "workspaces", "id-1", []string{"gate-1", "gate-2"})
+
+	// id-1 is in tier 1 where gate-3 is explicitly disabled, the gate must only
+	// be enabled for ids of tier 2 and 3, and other random ids which appear in
+	// none of the tiers becausethe gate is in an open state in tier 2.
+	expectGateClosed(t, cache, "family-B", "gate-3", "workspaces", "id-1")
+	expectGateOpened(t, cache, "family-B", "gate-3", "workspaces", "id-2")
+	expectGateOpened(t, cache, "family-B", "gate-3", "workspaces", "id-3")
+	expectGateOpened(t, cache, "family-B", "gate-3", "workspaces", "id-4")
+	expectGateOpened(t, cache, "family-B", "gate-3", "workspaces", "id-5")
+	expectGateOpened(t, cache, "family-B", "gate-3", "workspaces", "id-6")
+	expectGateOpened(t, cache, "family-B", "gate-3", "workspaces", "whatever")
 }
 
 func expectGateOpened(t testing.TB, cache *feature.Cache, family, gate, collection, id string) {

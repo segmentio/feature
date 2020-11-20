@@ -120,6 +120,85 @@ func (it *GateEnabledIter) Name() string {
 	return it.Family() + "/" + it.Gate()
 }
 
+type GateDisabledIter struct {
+	path       MountPoint
+	families   dir
+	gates      dir
+	collection string
+	id         string
+	salt       uint32
+	err        error
+	hash       *bufferedHash64
+}
+
+func (it *GateDisabledIter) Close() error {
+	if it.hash != nil {
+		releaseBufferedHash64(it.hash)
+		it.hash = nil
+	}
+	err1 := it.families.close()
+	err2 := it.gates.close()
+	if err2 != nil {
+		return err2
+	}
+	if err1 != nil {
+		return err1
+	}
+	return it.err
+}
+
+func (it *GateDisabledIter) Next() bool {
+	if it.id == "" {
+		return false
+	}
+
+	if it.hash == nil {
+		it.hash = acquireBufferedHash64()
+	}
+
+	for {
+		if it.gates.opened() {
+			for it.gates.next() {
+				g, err := readGate(filepath.Join(it.gates.path, it.gates.name(), it.collection))
+				if err != nil {
+					if os.IsNotExist(err) {
+						continue
+					}
+					it.err = err
+					it.Close()
+					return false
+				}
+
+				if !openGate(it.id, g.salt, g.volume, it.hash) {
+					return true
+				}
+			}
+
+			if it.gates.close() != nil {
+				return false
+			}
+		}
+
+		if !it.families.next() {
+			return false
+		}
+
+		it.gates = it.families.read()
+	}
+}
+
+func (it *GateDisabledIter) Family() string {
+	return it.families.name()
+}
+
+func (it *GateDisabledIter) Gate() string {
+	return it.gates.name()
+}
+
+func (it *GateDisabledIter) Name() string {
+	return it.Family() + "/" + it.Gate()
+}
+
 // openGate is inherited from github.com/segmentio/flagon; we had to port the
 // algorithm to ensure compatibility between the packages.
 func openGate(id, salt string, volume float64, h *bufferedHash64) bool {
