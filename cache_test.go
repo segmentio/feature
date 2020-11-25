@@ -61,7 +61,7 @@ func TestCache(t *testing.T) {
 
 	// id-1 is in tier 1 where gate-3 is explicitly disabled, the gate must only
 	// be enabled for ids of tier 2 and 3, and other random ids which appear in
-	// none of the tiers becausethe gate is in an open state in tier 2.
+	// none of the tiers because the gate is in an open state in tier 2.
 	expectGateClosed(t, cache, "family-B", "gate-3", "workspaces", "id-1")
 	expectGateOpened(t, cache, "family-B", "gate-3", "workspaces", "id-2")
 	expectGateOpened(t, cache, "family-B", "gate-3", "workspaces", "id-3")
