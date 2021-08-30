@@ -3,7 +3,7 @@ name: Test
 on: [pull_request]
 
 jobs:
-  test-go1.15:
+  test-go115:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -16,7 +16,7 @@ jobs:
         go mod vendor
         go test -v ./...
 
-  test-go1.16:
+  test-go116:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -29,7 +29,7 @@ jobs:
         go mod vendor
         go test -v ./...
 
-  test-go1.17:
+  test-go117:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
