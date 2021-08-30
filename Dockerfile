@@ -1,4 +1,4 @@
-FROM golang:1.15 as build
+FROM golang:1.17 as build
 WORKDIR /go/src/github.com/segmentio/feature
 COPY . .
 RUN CGO_ENABELD=0 go build -mod=vendor ./cmd/feature
