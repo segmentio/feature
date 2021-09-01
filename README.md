@@ -3,14 +3,19 @@ Feature gate database designed for simplicity and efficiency.
 
 ## Motivation
 
-Feature gates are an important part of releasing software changes, they bring
-safe guards and granular control over the exposure of data to new code paths.
-However, these promises can only be kept if programs can reliably access the
-feature gate data, and efficiently query the data set.
+Feature gates are an important part of controlling the risk associated with
+software releases, they bring safe guards and granular knobs over the exposure
+of data to new code paths.
 
-The `feature` package was designed with these two goals in mind, offering a
-feature gate model compatible with flagon, but designed to remove the need for
-running a sidecar to access the feature gate database.
+However, these promises can only be kept if programs can reliably access the
+feature gate data, and efficiently query the data set. Most feature gate systems
+rely on performing network calls to a foreign system, creating opportunities for
+cascading failures in distributed systems where feature gate checks are often
+performed on critical data paths.
+
+The `feature` package was designed to offer high availbility of the feature
+gates, and high query performance, allowing its use in large scale systems with
+many *nines* of uptime like those we run at Segment.
 
 ### Reliability
 
@@ -32,9 +37,6 @@ shared by all collocated processes, ensuring that a single copy of the data
 ever exists in memory.
 
 ## Data Models
-
-The `feature` package being compatible with [`flagon`](https://github.com/segmentio/flagon),
-its data models are mostly one-to-one mappings with flagon concepts.
 
 ### Collections
 
