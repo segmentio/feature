@@ -1,0 +1,5 @@
+github.com/segmentio/cli v0.3.4 h1:fdghOrtrCL4WLVFlWHw85hrAeDqAP3r+3ahJR2YDtJ4=
+github.com/segmentio/cli v0.3.4/go.mod h1:+m0rKUSZsAc4BPzL3Cw9jergrTVzySBdBerJcC/qfes=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 h1:tQIYjPdBoyREyB9XMu+nnTclpTYkz2zFM+lzLJFO4gQ=
+gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
