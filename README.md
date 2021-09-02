@@ -1,4 +1,4 @@
-# feature [![Build status](https://badge.buildkite.com/241bc64456fcbe3cc363c75ade4f473ad92af6284cb68858db.svg)](https://buildkite.com/segment/feature?branch=main)
+# feature ![build status](https://github.com/segmentio/feature/actions/workflows/test.yml/badge.svg)
 Feature gate database designed for simplicity and efficiency.
 
 ## Motivation
