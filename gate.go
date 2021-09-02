@@ -199,8 +199,8 @@ func (it *GateDisabledIter) Name() string {
 	return it.Family() + "/" + it.Gate()
 }
 
-// openGate is inherited from github.com/segmentio/flagon; we had to port the
-// algorithm to ensure compatibility between the packages.
+// openGate is an algorithm we used historically in internal feature gating
+// systems. We adopted it here for interoperability purposes.
 func openGate(id, salt string, volume float64, h *bufferedHash64) bool {
 	if volume <= 0 {
 		return false
