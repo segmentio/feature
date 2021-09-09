@@ -29,7 +29,7 @@ func (s *Store) Close() error {
 	return nil
 }
 
-// GateOpened returns true if a gate is opened for a given id.
+// GateOpen returns true if a gate is opened for a given id.
 func (s *Store) GateOpen(family, gate, collection, id string) bool {
 	return s.cache.GateOpen(family, gate, collection, id)
 }

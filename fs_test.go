@@ -120,33 +120,6 @@ func testMountPointDeleteGroupNotExist(t *testing.T, path feature.MountPoint) {
 	deleteGroup(t, path, "group-A")
 }
 
-/*
-func expectGates(t testing.TB, path feature.MountPoint, family string, gates []string) {
-	t.Helper()
-	found := readAll(t, path.Gates(family))
-
-	if !reflect.DeepEqual(found, gates) {
-		t.Error("gates mismatch")
-		t.Logf("want: %q", gates)
-		t.Logf("got:  %q", found)
-	}
-
-	for _, name := range gates {
-		g, err := path.OpenGate(family, name)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		if g.Family() != family {
-			t.Errorf("gate family mismatch, want %q but got %q", family, g.Family())
-		}
-		if g.Name() != name {
-			t.Errorf("gate name mismatch, want %q but got %q", name, g.Name())
-		}
-	}
-}
-*/
-
 func createTier(t testing.TB, path feature.MountPoint, group, name string) *feature.Tier {
 	t.Helper()
 

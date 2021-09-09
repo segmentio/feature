@@ -270,16 +270,16 @@ programs that intend to apply updates to the database must recreate it and
 replace the entire directory structure (which should be done in an atomic
 fashion via the use of the `rename(2)` syscall for example).
 
-### `feature.(*Store).OpenGate`
+### `feature.(*Store).GateOpen`
 
-This is the most common use case for programs, the `OpenGate` method tests
+This is the most common use case for programs, the `GateOpen` method tests
 whether a gate is open for a given identifier.
 
 The gate is defined by the pair of gate family and name, while the identifier
 is expressed as a pair of the collection and its value.
 
 ```go
-if features.OpenGate("gate-family", "gate-name", "collection", "1234") {
+if features.GateOpen("gate-family", "gate-name", "collection", "1234") {
     ...
 }
 ```

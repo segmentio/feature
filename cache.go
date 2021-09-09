@@ -49,7 +49,7 @@ func (c *Cache) Close() error {
 	return nil
 }
 
-// GateOpened returns true if a gate is opened for a given id.
+// GateOpen returns true if a gate is opened for a given id.
 func (c *Cache) GateOpen(family, gate, collection, id string) bool {
 	g := c.LookupGates(family, collection, id)
 	i := sort.Search(len(g), func(i int) bool {
