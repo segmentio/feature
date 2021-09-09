@@ -165,7 +165,7 @@ type cachedGate struct {
 	open       bool
 }
 
-// The Laod method loads the features at the mount point it is called on,
+// The Load method loads the features at the mount point it is called on,
 // returning a Cache object exposing the state.
 //
 // The returned cache holds operating system resources and therefore must be
