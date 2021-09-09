@@ -8,30 +8,30 @@ software releases, they bring safe guards and granular knobs over the exposure
 of data to new code paths.
 
 However, these promises can only be kept if programs can reliably access the
-feature gate data, and efficiently query the data set. Most feature gate systems
-rely on performing network calls to a foreign system, creating opportunities for
-cascading failures in distributed systems where feature gate checks are often
-performed on critical data paths.
+feature gate data, and query the data set with high efficiency. Most feature
+gate systems rely on performing network calls to a foreign system, creating
+opportunities for cascading failures in distributed systems where feature gate
+checks are often performed on critical data paths.
 
 The `feature` package was designed to offer high availbility of the feature
 gates, and high query performance, allowing its use in large scale systems with
-many *nines* of uptime like those we run at Segment.
+many *nines* of uptime like those run by Segment.
 
 ### Reliability
 
 The feature database is represented by an immutable set of directories and
 files on a file system. The level of reliability offered by a set of files on
-disk exceeds by a wide margin what we can achieve with a daemon process serving
+disk exceeds by a wide margin what can be achieved with a daemon process serving
 the data over a network interface. Would the program updating the feature
 database be restarted or crashed, the files would remain available for consumers
-to read and query. The system is known to _"fail static"_: in the worst case
+to read and query. The system is known to _fail static_: in the worst case
 scenario, nothing changes.
 
 ### Efficiency
 
-The feature database being immutable, it enables highly efficient access to
+The feature database being immutable, it enables very efficient access to
 the data. Programs can implement simple and high performance caching layers
-because they don't need to manage cache expirations or transactional updates.
+because they do not need to manage cache expirations or transactional updates.
 The database files are mapped to read-only memory areas and therefore can be
 shared by all collocated processes, ensuring that a single copy of the data
 ever exists in memory.
@@ -41,9 +41,9 @@ ever exists in memory.
 ### Collections
 
 Collections are lists of unique identifiers that programs can query the state
-of gates for (either open and closed). The collections are arranged in groups
-and tiers. Each group may have multiple tiers, within each tier the collection
-files contain the list of identifiers (one by line).
+of gates for; gates are either open or closed. The collections are arranged in
+groups and tiers. Each group may have multiple tiers, within each tier the
+collection files contain the list of identifiers, one by line.
 
 Here is an example of the on-disk representation of collections:
 ```
@@ -119,7 +119,7 @@ which determine which of the identifiers will see the gate open or closed.
 
 | Key    | Value                                                                                              |
 | ------ | -------------------------------------------------------------------------------------------------- |
-| open   | true/false, indicates the default behavior for identifiers that aren't in the collection file      |
+| open   | true/false, indicates the default behavior for identifiers that are not in the collection file     |
 | salt   | random value injected in the hash function used to determine the gate open state                   |
 | volume | floating point number between 0 and 1 defining the volume of identifiers that the gate is open for |
 
@@ -174,8 +174,8 @@ standard   5     3            18        40
 
 ### `feature describe collection [-g group] [-t tier] [collection]`
 
-This command prints the list of identifiers in a collection, optinally filtering
-on a group and tier (by default all groups and tiers are shown).
+This command prints the list of identifiers in a collection, with the option to
+filter on a group and tier; by default all groups and tiers are shown.
 
 ```
 $ feature describe collection workspace
@@ -193,7 +193,7 @@ pkpdcdSLNX14Za6qpD7wtv
 ```
 
 _Note: the identifiers are not displayed in any particular order, this command
-simply iterate over the directories and scans the collection files._
+iterates over the directories and scans the collection files._
 
 ### `feature describe tier [group] [tier]`
 
@@ -239,8 +239,8 @@ import (
 
 The `feature.MountPoint` type represents a path on the file system where a
 feature database is mounted. This type is the entry point to all other APIs,
-typically a program will construct one mount point from a configuration option
-or environment variable:
+a common pattern is for programs to construct a mount point from a
+configuration option or environment variable:
 
 ```go
 mountPoint := feature.MountPoint("/path/to/features")
