@@ -50,6 +50,8 @@ func (c *Cache) Close() error {
 }
 
 // GateOpen returns true if a gate is opened for a given id.
+//
+// The method does not retain any of the strings passed as arguments.
 func (c *Cache) GateOpen(family, gate, collection, id string) bool {
 	g := c.LookupGates(family, collection, id)
 	i := sort.Search(len(g), func(i int) bool {
@@ -59,6 +61,8 @@ func (c *Cache) GateOpen(family, gate, collection, id string) bool {
 }
 
 // LookupGates returns the list of open gates in a family for a given id.
+//
+// The method does not retain any of the strings passed as arguments.
 func (c *Cache) LookupGates(family, collection, id string) []string {
 	key := lruCacheKey{
 		family:     family,
@@ -68,6 +72,13 @@ func (c *Cache) LookupGates(family, collection, id string) []string {
 
 	if v := c.cache.lookup(key); v != nil && v.key == key {
 		return v.gates
+	}
+
+	buf := family + collection + id
+	key = lruCacheKey{
+		family:     buf[:len(family)],
+		collection: buf[len(family) : len(family)+len(collection)],
+		id:         buf[len(family)+len(collection):],
 	}
 
 	disabled := make(map[string]struct{})
