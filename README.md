@@ -1,4 +1,4 @@
-# feature ![build status](https://github.com/segmentio/feature/actions/workflows/test.yml/badge.svg)
+# feature ![build status](https://github.com/segmentio/feature/actions/workflows/test.yml/badge.svg) [![GoDoc](https://pkg.go.dev/github.com/segmentio/encoding?status.svg)](https://pkg.go.dev/github.com/segmentio/encoding)
 Feature gate database designed for simplicity and efficiency.
 
 ## Motivation
